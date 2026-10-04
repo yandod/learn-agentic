@@ -1,0 +1,1256 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="author" content="yandod">
+<title>エージェントが質問に答えるまで</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+1+Code:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F2F4F7; --surface:#FFFFFF; --ink:#18212B; --muted:#5B6875;
+  --rule:#D5DBE2; --line:#9BA6B2;
+  --planner:#2F54D9; --evaluator:#A8690A; --executor:#0B7A6E; --tools:#9B2C9B;
+  --finish:#1F8A3B; --error:#C42B2B;
+  --sans:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic UI","Noto Sans JP",system-ui,sans-serif;
+  --mono:"M PLUS 1 Code",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#12161C; --surface:#1A2029; --ink:#E6EBF1; --muted:#9AA6B3;
+    --rule:#2C3541; --line:#5A6675;
+    --planner:#8FA6FF; --evaluator:#E5B458; --executor:#4FD1C1; --tools:#E08AE0;
+    --finish:#6FD08A; --error:#FF8A8A;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#12161C; --surface:#1A2029; --ink:#E6EBF1; --muted:#9AA6B3;
+  --rule:#2C3541; --line:#5A6675;
+  --planner:#8FA6FF; --evaluator:#E5B458; --executor:#4FD1C1; --tools:#E08AE0;
+  --finish:#6FD08A; --error:#FF8A8A;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 8px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.75;-webkit-text-size-adjust:100%}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--planner);outline-offset:2px}
+
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 104px}
+.masthead h1{font-size:clamp(22px,3.4vw,30px);line-height:1.3;margin:0 0 6px;font-weight:700;font-feature-settings:"palt";letter-spacing:.01em}
+.masthead p{margin:0;color:var(--muted);max-width:44em;font-size:14px}
+@media (max-width:560px){.masthead p{font-size:13px;line-height:1.6}.wrap{padding-top:14px}}
+
+/* stages */
+.stages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:16px 0 0}
+.stages button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;min-height:52px;cursor:pointer;text-align:left;line-height:1.35;font-weight:500;font-size:14px}
+.stages button small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.stages button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:700}
+.stages button[aria-pressed="true"] small{color:inherit;opacity:.75}
+
+/* setup */
+.setup{margin:10px 0 14px;padding:12px 14px;background:var(--surface);border:1px solid var(--rule);border-radius:10px;display:grid;gap:12px}
+.seg{display:inline-grid;grid-auto-flow:column;border:1px solid var(--line);border-radius:8px;overflow:hidden;width:max-content;max-width:100%}
+.seg button{border:0;background:transparent;padding:7px 14px;cursor:pointer;min-height:42px;white-space:nowrap}
+.seg button + button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper);font-weight:500}
+.field{display:grid;gap:4px}
+.field > span{font-size:13px;color:var(--muted)}
+select,input[type="text"]{width:100%;min-height:42px;padding:6px 10px;background:var(--paper);border:1px solid var(--line);border-radius:8px}
+.query-fixed{margin:0;font-weight:500}
+.row{display:flex;gap:10px 12px;flex-wrap:wrap;align-items:end}
+.row .field{flex:1 1 220px;max-width:30em}
+.row .field.fit{flex:0 0 auto}
+.stack{display:grid;gap:10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer;min-height:34px;text-align:left}
+.chips button:hover{border-color:var(--ink)}
+.status{margin:0;font-size:13px;color:var(--muted)}
+.status.err{color:var(--error)}
+.status.ok{color:var(--finish)}
+.bar{height:6px;border-radius:3px;background:var(--rule);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--executor);transition:width .2s}
+[hidden]{display:none !important}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;min-height:44px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover:not(:disabled){border-color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* stage */
+.figure{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:10px}
+.figure svg{display:block;width:100%;height:auto}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:6px 4px 0;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:22px;height:12px;border:1.5px solid var(--line);border-radius:2px}
+.legend i.d{border-style:dashed}
+
+.controls{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:8px;
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));
+  background:color-mix(in srgb,var(--paper) 90%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border-top:1px solid var(--rule)}
+.controls .primary{flex:1 1 auto}
+
+@media (min-width:960px){
+  .wrap{padding-bottom:40px}
+  .stage{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px;align-items:start}
+  .left{position:sticky;top:16px}
+  .controls{position:static;padding:12px 0 0;background:none;border:0;backdrop-filter:none;-webkit-backdrop-filter:none}
+  .controls .primary{flex:0 0 auto;min-width:11em}
+}
+
+/* diagram */
+.edge path{fill:none;stroke:var(--line);stroke-width:1.5;stroke-linejoin:round}
+.edge polygon{fill:var(--line)}
+.edge.active path{stroke:var(--step);stroke-width:2.5}
+.edge.active polygon{fill:var(--step)}
+.node .shape{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.node.data .shape{stroke-dasharray:5 4}
+.node.input .shape{stroke-dasharray:1.5 3.5}
+.node text{fill:var(--ink);text-anchor:middle;font-family:var(--sans)}
+.node .en{font-weight:700}
+.node.data .en,.node.input .en{font-weight:500}
+.node .ja{fill:var(--muted)}
+.node.active .shape{stroke:var(--c);stroke-width:2.5;stroke-dasharray:none;fill:color-mix(in srgb,var(--c) 14%,var(--surface))}
+.node.active .ja{fill:var(--ink)}
+.dot{fill:var(--step);stroke:var(--surface);stroke-width:2}
+.n-query{--c:var(--ink)} .n-planner,.n-plan,.n-model{--c:var(--planner)}
+.n-evaluator{--c:var(--evaluator)} .n-executor{--c:var(--executor)}
+.n-tools,.n-outputs{--c:var(--tools)} .n-finish,.n-answer{--c:var(--finish)}
+
+/* log */
+.logwrap{margin-top:14px;min-height:60vh}
+.log-hint{margin:0 2px 6px;font-size:12px;color:var(--muted)}
+.log{display:flex;gap:10px;align-items:flex-start;overflow-x:auto;scroll-snap-type:x mandatory;
+  margin-inline:-16px;padding:0 16px 10px;scroll-padding-inline:16px;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.log .card{flex:0 0 min(88%,420px);scroll-snap-align:start}
+.log .empty{flex:1 0 100%}
+@media (min-width:960px){
+  .logwrap{margin-top:0;min-height:0}
+  .log-hint{display:none}
+  .log{flex-direction:column-reverse;justify-content:flex-end;align-items:stretch;overflow:visible;scroll-snap-type:none;margin:0;padding:0}
+  .log .card{flex:none}
+  .card:not(.current){opacity:.82}
+}
+.empty{margin:0;padding:18px 16px;border:1px dashed var(--line);border-radius:10px;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--rule);border-left:4px solid var(--c);border-radius:10px;padding:12px 14px}
+.card header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.card .num{font-family:var(--mono);font-size:13px;color:var(--muted);min-width:1.4em}
+.card .who{font-weight:700;color:var(--c)}
+.card h2{font-size:16px;margin:0;font-weight:700;line-height:1.5;overflow-wrap:anywhere}
+.card .badge{font-size:12px;color:var(--muted);border:1px solid var(--rule);border-radius:999px;padding:0 9px;line-height:1.7;margin-left:auto}
+.card .lead{margin:6px 0 0;color:var(--muted);font-size:14px}
+.card .body{display:grid;gap:8px;margin-top:10px}
+.card .body:empty{display:none}
+.kv > b{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.kv p{margin:0}
+pre,code{font-family:var(--mono);font-size:13px}
+pre{margin:0;padding:8px 10px;background:var(--paper);border-radius:6px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+ol.plan{margin:0;padding:0;list-style:none;display:grid;gap:4px;counter-reset:s}
+ol.plan li{counter-increment:s;display:flex;gap:8px;align-items:baseline}
+ol.plan li::before{content:counter(s) ".";font-family:var(--mono);font-size:13px;color:var(--muted);min-width:1.4em}
+ol.plan li.bad code{color:var(--error);text-decoration:line-through}
+ul.checks{margin:0;padding:0;list-style:none;display:grid;gap:2px}
+ul.checks li{display:flex;gap:8px}
+ul.checks li::before{content:"✓";color:var(--finish);font-weight:700}
+ul.checks li.ng::before{content:"✗";color:var(--error)}
+.verdict{margin:0;font-weight:700}
+.verdict.ok{color:var(--finish)} .verdict.ng{color:var(--error)}
+.answer{margin:0;font-size:18px;font-weight:700;line-height:1.6}
+.stats{margin:0;font-size:13px;color:var(--muted)}
+.card .body .lead{margin:4px 0 0}
+.card .body .btn{justify-self:start;white-space:normal;text-align:left}
+details summary{cursor:pointer;font-size:13px;color:var(--muted)}
+details pre{margin-top:6px;font-size:12px}
+ul.tools{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+ul.tools code{display:block;overflow-wrap:anywhere}
+ul.tools span{font-size:13px;color:var(--muted)}
+
+footer{margin-top:28px;font-size:13px;color:var(--muted)}
+footer a{color:inherit}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <h1>エージェントが質問に答えるまで</h1>
+    <p>答えの文を作るだけのAIから、道具を使うAI、そしてエージェントへ。3つの段階を順に、一歩ずつ進めて見るデモです。</p>
+  </header>
+
+  <nav class="stages" aria-label="段階">
+    <button type="button" data-stage="1" aria-pressed="true"><small>段階 1</small>答えるだけのAI</button>
+    <button type="button" data-stage="2" aria-pressed="false"><small>段階 2</small>道具を使うAI</button>
+    <button type="button" data-stage="3" aria-pressed="false"><small>段階 3</small>エージェント</button>
+  </nav>
+
+  <section class="setup" aria-label="設定">
+    <div class="row">
+      <div class="field fit">
+        <span id="modeLabel">動かし方</span>
+        <div class="seg" role="group" aria-labelledby="modeLabel">
+          <button type="button" id="modeScript" aria-pressed="true">台本</button>
+          <button type="button" id="modeModel" aria-pressed="false">ブラウザ内モデル</button>
+        </div>
+      </div>
+      <label class="field" id="sceneField" hidden><span>場面</span><select id="sceneSel"></select></label>
+      <label class="field" id="modelField" hidden><span>モデル</span><select id="modelSel"></select></label>
+      <button type="button" class="btn" id="loadBtn" hidden>モデルを読み込む</button>
+    </div>
+
+    <p class="query-fixed" id="scriptBox">質問: <span id="sceneQuery"></span></p>
+
+    <div id="modelBox" class="stack" hidden>
+      <div class="bar" id="loadBar" hidden><i></i></div>
+      <p class="status" id="modelStatus" role="status"></p>
+      <label class="field"><span>質問</span><input type="text" id="queryInput" autocomplete="off"></label>
+      <div class="chips" id="chips"></div>
+    </div>
+  </section>
+
+  <div class="stage">
+    <div class="left">
+      <div class="figure">
+        <div id="diagram"></div>
+        <div class="legend"><span><i></i>実線は係（部品）</span><span><i class="d"></i>破線は受け渡されるデータ</span></div>
+      </div>
+      <div class="controls">
+        <button type="button" class="btn primary" id="nextBtn">次のステップ</button>
+        <button type="button" class="btn" id="autoBtn" aria-pressed="false">自動で進める</button>
+        <button type="button" class="btn" id="resetBtn">最初から</button>
+      </div>
+    </div>
+    <div class="logwrap">
+      <p class="log-hint" id="logHint" hidden>横にスライドすると前のステップを見返せます。図もそのステップに切り替わります。</p>
+      <section class="log" id="log" aria-live="polite" aria-label="ステップの記録"></section>
+    </div>
+  </div>
+
+  <footer>
+    <p>図と用語は Chip Huyen <a href="https://huyenchip.com/2025/01/07/agents.html" target="_blank" rel="noopener">“Agents”</a>（2025）の図 6-9 をもとにしています。店も商品も売上も架空のデータで、店の「今日」は 2030-09-13 に固定しています。</p>
+  </footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- 小道具 ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  if (attrs) for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'text') el.textContent = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids.flat()) {
+    if (k == null || k === false) continue;
+    el.append(k.nodeType ? k : document.createTextNode(String(k)));
+  }
+  return el;
+}
+const put = (el, ...kids) => { el.append(...kids.flat().filter(k => k != null && k !== false)); return el; };
+const str = v => (typeof v === 'string' ? v : v == null ? '' : String(v));
+
+/* ---------- 架空の店のデータ ---------- */
+const TODAY = '2030-09-13';
+const DATA_START = '2030-08-15';
+const PRODUCTS = [
+  { name: '旅するマグカップ', price: 1980, category: '食器', stock: 14, base: 9 },
+  { name: '猫の付箋', price: 380, category: '文具', stock: 120, base: 8 },
+  { name: 'そらいろ手帳', price: 1480, category: '文具', stock: 23, base: 6 },
+  { name: 'ふわふわ靴下', price: 880, category: '衣類', stock: 41, base: 5 },
+  { name: '夜ふかしブレンド', price: 1280, category: '食品', stock: 9, base: 4 },
+  { name: '木のしおり', price: 550, category: '文具', stock: 60, base: 3 },
+  { name: '雨の日トート', price: 2480, category: 'バッグ', stock: 7, base: 2 },
+  { name: '星空ノート', price: 720, category: '文具', stock: 35, base: 4 },
+];
+const DAY = 86400000;
+function parseDate(s) {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s.trim())) return NaN;
+  const t = Date.parse(s.trim() + 'T00:00:00Z');
+  if (Number.isNaN(t) || new Date(t).toISOString().slice(0, 10) !== s.trim()) return NaN;
+  return t;
+}
+const fmtDate = t => new Date(t).toISOString().slice(0, 10);
+const addDays = (s, n) => fmtDate(parseDate(s) + n * DAY);
+const unitsOn = (pi, d) => PRODUCTS[pi].base + ((pi * 7 + d * 13 + pi * d) % 5);
+
+/* ---------- 道具（本物の関数。台本でもモデルでも同じものを呼ぶ） ---------- */
+function calc(expr) {
+  const s = str(expr).replace(/[×]/g, '*').replace(/[÷]/g, '/').replace(/[,，\s円]/g, '');
+  if (!s || !/^[0-9+\-*/().]+$/.test(s)) throw new Error('数字と + - * / ( ) だけの式にしてください');
+  let i = 0;
+  const factor = () => {
+    if (s[i] === '(') { i++; const v = sum(); if (s[i] !== ')') throw new Error('かっこが閉じていません'); i++; return v; }
+    if (s[i] === '-') { i++; return -factor(); }
+    const m = /^\d+(\.\d+)?/.exec(s.slice(i));
+    if (!m) throw new Error('式を読み取れません');
+    i += m[0].length; return parseFloat(m[0]);
+  };
+  const term = () => { let v = factor(); while (s[i] === '*' || s[i] === '/') { const op = s[i++]; const r = factor(); v = op === '*' ? v * r : v / r; } return v; };
+  const sum = () => { let v = term(); while (s[i] === '+' || s[i] === '-') { const op = s[i++]; const r = term(); v = op === '+' ? v + r : v - r; } return v; };
+  const v = sum();
+  if (i < s.length) throw new Error('式を読み取れません');
+  if (!Number.isFinite(v)) throw new Error('計算できません');
+  return Math.round(v * 1e6) / 1e6;
+}
+
+const TOOLS = {
+  get_today_date: {
+    emoji: '📅',
+    desc: '今日の日付を返す',
+    params: {},
+    run: () => ({ today: TODAY }),
+  },
+  fetch_top_products: {
+    emoji: '🏆',
+    desc: '期間内に売れた個数の多い順に商品を返す',
+    params: {
+      start_date: { type: 'string', desc: '期間の最初の日（YYYY-MM-DD）' },
+      end_date: { type: 'string', desc: '期間の最後の日（YYYY-MM-DD）' },
+      num_products: { type: 'integer', desc: '上位いくつ返すか' },
+    },
+    run: ({ start_date, end_date, num_products }) => {
+      const a = parseDate(start_date), b = parseDate(end_date);
+      if (Number.isNaN(a) || Number.isNaN(b)) throw new Error('日付は YYYY-MM-DD の形で指定してください');
+      if (a > b) throw new Error('start_date が end_date より後になっています');
+      const n = Math.floor(Number(num_products));
+      if (!(n >= 1 && n <= PRODUCTS.length)) throw new Error(`num_products は 1〜${PRODUCTS.length} の整数にしてください`);
+      const lo = Math.max(a, parseDate(DATA_START)), hi = Math.min(b, parseDate(TODAY));
+      if (lo > hi) throw new Error(`${start_date}〜${end_date} の販売データはありません（あるのは ${DATA_START}〜${TODAY}）`);
+      const d0 = parseDate(DATA_START);
+      const totals = PRODUCTS.map((p, pi) => {
+        let u = 0;
+        for (let t = lo; t <= hi; t += DAY) u += unitsOn(pi, Math.round((t - d0) / DAY));
+        return { product_name: p.name, units_sold: u };
+      }).sort((x, y) => y.units_sold - x.units_sold);
+      return { products: totals.slice(0, n) };
+    },
+  },
+  fetch_product_info: {
+    emoji: '🏷️',
+    desc: '商品の価格・カテゴリ・在庫を返す',
+    params: { product_name: { type: 'string', desc: '商品名（正確に）' } },
+    run: ({ product_name }) => {
+      const key = str(product_name).trim().replace(/^[「『"']+|[」』"']+$/g, '');
+      const p = PRODUCTS.find(x => x.name === key);
+      if (!p) throw new Error(`「${key}」という商品は見つかりません`);
+      return { product_name: p.name, price_yen: p.price, category: p.category, stock: p.stock };
+    },
+  },
+  calculator: {
+    emoji: '🧮',
+    desc: '数式を計算する',
+    params: { expression: { type: 'string', desc: '数字と + - * / ( ) だけの式' } },
+    run: ({ expression }) => ({ result: calc(expression) }),
+  },
+};
+const MAX_STEPS = 6, MAX_ATTEMPTS = 3;
+const sig = name => `${name}(${Object.keys(TOOLS[name].params).join(', ')})`;
+const fmtCall = (name, args) => `${name}(${Object.entries(args || {}).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ')})`;
+const fmtOut = o => JSON.stringify(o, null, 2);
+// 画面に見せるときだけ絵文字を付ける（モデルに渡す指示文では素の名前のまま）
+const em = name => TOOLS[name]?.emoji || '❓';
+const showName = name => `${em(name)} ${name}`;
+const showSig = name => `${em(name)} ${sig(name)}`;
+const showCall = (name, args) => `${em(name)} ${fmtCall(name, args)}`;
+const toolList = () => h('ul', { class: 'tools' }, Object.keys(TOOLS).map(n => h('li', null, h('code', { text: showSig(n) }), h('span', { text: TOOLS[n].desc }))));
+
+/* ---------- モデルに渡す指示文（台本モードでも同じものを見せる） ---------- */
+function plannerPrompt(ctx) {
+  const inv = Object.keys(TOOLS).map(n => `- ${sig(n)}: ${TOOLS[n].desc}`).join('\n');
+  let hist = '';
+  if (ctx.history.length) {
+    hist = '\nこれまでの計画と、差し戻された理由:\n' + ctx.history.map((x, i) =>
+      `${i + 1}回目の計画: ${JSON.stringify(x.plan)}\n理由: ${x.feedback}`).join('\n') + '\n同じ失敗をしない計画にしてください。\n';
+  }
+  return `あなたはエージェントの「Planner（計画役）」です。質問に答えるための計画を作ってください。計画は、使う道具の名前を呼ぶ順に並べたものです。
+
+使える道具:
+${inv}
+
+決まり:
+- 上の道具だけを使う。
+- 引数は書かない（実行のときに決める）。
+- ${MAX_STEPS}ステップ以内。
+- 「先週」「今月」のように今日を基準にした期間は、今日の日付を調べてから決める。
+
+例:
+質問: 「星空ノートはいくら？」
+{"thought":"商品情報を引けば価格がわかる。","steps":["fetch_product_info"]}
+質問: 「先週いちばん売れた商品は？」
+{"thought":"先週の範囲を決めるために今日の日付が要る。そのあと売上順を調べる。","steps":["get_today_date","fetch_top_products"]}
+${hist}
+質問: 「${ctx.query}」
+JSON だけで答えてください。`;
+}
+function historyText(outputs) {
+  return outputs.length
+    ? outputs.map((o, i) => `${i + 1}. ${fmtCall(o.tool, o.args)} → ${JSON.stringify(o.output)}`).join('\n')
+    : '（まだありません）';
+}
+function argsPrompt(ctx, idx) {
+  const name = ctx.plan[idx], t = TOOLS[name];
+  const planLine = ctx.plan.map((n, i) => `${i + 1}. ${n}${i < idx ? '（済み）' : i === idx ? '（いまここ）' : ''}`).join('\n');
+  const ps = Object.entries(t.params).map(([k, p]) => `- ${k}（${p.type === 'integer' ? '整数' : '文字列'}）: ${p.desc}`).join('\n');
+  return `あなたはエージェントの「Executor（実行役）」です。計画の次の道具を呼ぶための引数を決めてください。
+
+質問: 「${ctx.query}」
+
+計画:
+${planLine}
+
+これまでの道具の出力:
+${historyText(ctx.outputs)}
+
+いま呼ぶ道具: ${sig(name)}
+${t.desc}
+引数:
+${ps}
+
+決まり:
+- 値は、質問とこれまでの出力から読み取る。出力にない商品名や日付を作らない。
+- 「先週」は、今日を含む直近7日間とする。
+- 同じ道具を2回呼ぶ計画なら、まだ調べていないものを選ぶ。
+
+引数を JSON だけで答えてください。`;
+}
+function judgePrompt(ctx) {
+  return `あなたはエージェントの「Evaluator（評価役）」です。道具の出力だけを根拠に、質問に答えられるかを判定してください。
+
+質問: 「${ctx.query}」
+
+道具の出力:
+${historyText(ctx.outputs)}
+
+答えられるとき: {"done": true, "answer": "質問への答え（日本語で1〜2文）", "feedback": ""}
+足りないとき: {"done": false, "answer": "", "feedback": "何が足りないか、次の計画への助言"}
+
+JSON だけで答えてください。`;
+}
+const answerOnlyPrompt = ctx => `次の質問に、日本語で1〜2文で答えてください。
+
+質問: 「${ctx.query}」`;
+function pickPrompt(ctx) {
+  const inv = Object.keys(TOOLS).map(n => `- ${sig(n)}: ${TOOLS[n].desc}`).join('\n');
+  return `質問に答えるために、道具を1つ選んで呼び出してください。
+
+使える道具:
+${inv}
+
+質問: 「${ctx.query}」
+
+呼び出しを JSON だけで答えてください。
+例: {"tool":"fetch_product_info","args":{"product_name":"星空ノート"}}`;
+}
+const answerWithPrompt = ctx => `道具の出力だけを根拠に、質問に日本語で1〜2文で答えてください。出力から答えがわからないときは、わからないと答えてください。
+
+質問: 「${ctx.query}」
+道具の呼び出し: ${fmtCall(ctx.call.tool, ctx.call.args)}
+道具の出力: ${JSON.stringify(ctx.output)}`;
+const PICK_SCHEMA = { type: 'object', properties: { tool: { type: 'string' }, args: { type: 'object' } }, required: ['tool', 'args'] };
+const PLAN_SCHEMA = { type: 'object', properties: { thought: { type: 'string' }, steps: { type: 'array', items: { type: 'string' } } }, required: ['thought', 'steps'] };
+const JUDGE_SCHEMA = { type: 'object', properties: { done: { type: 'boolean' }, answer: { type: 'string' }, feedback: { type: 'string' } }, required: ['done', 'answer', 'feedback'] };
+const argsSchema = t => ({
+  type: 'object',
+  properties: Object.fromEntries(Object.entries(t.params).map(([k, p]) => [k, { type: p.type }])),
+  required: Object.keys(t.params),
+});
+
+/* ---------- 頭脳その1: 台本（モデルの代役） ---------- */
+const Q_MAIN = '先週いちばん売れた商品の価格は？';
+const Q_SIMPLE = '「そらいろ手帳」はいくら？';
+const GOOD = {
+  thought: '「先週」の範囲を決めるには今日の日付が要る。売上1位の商品名がわかれば、その価格を引ける。',
+  steps: ['get_today_date', 'fetch_top_products', 'fetch_product_info'],
+  args: [
+    null,
+    o => ({ start_date: addDays(o[0].output.today, -6), end_date: o[0].output.today, num_products: 1 }),
+    o => ({ product_name: o[1].output.products[0].product_name }),
+  ],
+  judge: o => ({
+    done: true, feedback: '',
+    answer: `先週（${o[1].args.start_date}〜${o[1].args.end_date}）いちばん売れたのは「${o[2].output.product_name}」で、価格は ${o[2].output.price_yen.toLocaleString('ja-JP')} 円です。`,
+  }),
+};
+const SCENES = [
+  { id: 'smooth', label: 'すんなり成功する', query: Q_MAIN, attempts: [GOOD] },
+  {
+    id: 'badtool', label: '一覧にない道具を計画に入れてしまう', query: Q_MAIN,
+    attempts: [
+      { thought: 'ネットで売れ筋を検索すれば早い。そのあと商品情報で価格を見る。', steps: ['web_search', 'fetch_product_info'], args: [], judge: null },
+      { ...GOOD, thought: 'web_search は使えない。一覧にある fetch_top_products で売上順を調べる。期間を決めるために、先に今日の日付を確かめる。' },
+    ],
+  },
+  {
+    id: 'baddate', label: '日付を思い込みで決めてしまう', query: Q_MAIN,
+    attempts: [
+      {
+        thought: '先週の売上1位を調べて、その商品の価格を見ればよい。',
+        steps: ['fetch_top_products', 'fetch_product_info'],
+        args: [() => ({ start_date: '2024-06-10', end_date: '2024-06-16', num_products: 1 })],
+        judge: null,
+      },
+      { ...GOOD, thought: '今日が何日かを確かめずに期間を決めていた。まず get_today_date で今日を調べ、そこから先週の範囲を決める。' },
+    ],
+  },
+];
+function scriptedBrain(scene) {
+  const att = ctx => scene.attempts[Math.min(ctx.attempt, scene.attempts.length) - 1];
+  return {
+    kind: 'script', badge: '台本（モデルの代役）',
+    async plan(ctx) { await sleep(250); const a = att(ctx); return { thought: a.thought, steps: a.steps.slice() }; },
+    async args(ctx, idx) { await sleep(200); const f = att(ctx).args[idx]; return f ? f(ctx.outputs) : {}; },
+    async judge(ctx) { await sleep(250); return att(ctx).judge(ctx.outputs); },
+    // 段階 1・2 用。店のデータを見ていない答えは、わざと当て推量にしてある。
+    async answerOnly() { await sleep(250); return '「そらいろ手帳」は、一般的な手帳と同じく 1,000 円前後のことが多いです。'; },
+    async pickTool() { await sleep(250); return { tool: 'fetch_product_info', args: { product_name: 'そらいろ手帳' } }; },
+    async answerWith(ctx) { await sleep(250); const o = ctx.output; return `「${o.product_name}」は ${o.price_yen.toLocaleString('ja-JP')} 円です。`; },
+  };
+}
+
+/* ---------- 頭脳その2: ブラウザ内のモデル（WebLLM / WebGPU） ---------- */
+const WEBLLM_URL = 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.85/lib/index.js';
+const MODELS = [
+  { id: 'Qwen3.5-2B-q4f16_1-MLC', label: 'Qwen3.5 2B（標準、GPUメモリ約2.2GB）' },
+  { id: 'Qwen3.5-0.8B-q4f16_1-MLC', label: 'Qwen3.5 0.8B（軽い、約1.6GB）' },
+  { id: 'Qwen3.5-4B-q4f16_1-MLC', label: 'Qwen3.5 4B（賢い、約3.9GB）' },
+  { id: 'gemma-2-2b-jpn-it-q4f16_1-MLC', label: 'Gemma 2 2B JPN（日本語向け、約1.9GB）' },
+  { id: 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC', label: 'Qwen2.5 1.5B（約1.6GB）' },
+];
+const llm = { engine: null, modelId: null, loading: false };
+
+const stripThink = t => str(t).replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+function parseLoose(text) {
+  const t = stripThink(text);
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) return null;
+  try { return JSON.parse(t.slice(a, b + 1)); } catch { return null; }
+}
+async function chat(prompt, onToken, schema) {
+  const base = { messages: [{ role: 'user', content: prompt }], temperature: 0.2, max_tokens: 400, stream: true };
+  if (/^Qwen3/.test(llm.modelId)) base.extra_body = { enable_thinking: false };
+  const once = async req => {
+    let text = '';
+    const stream = await llm.engine.chat.completions.create(req);
+    for await (const chunk of stream) {
+      text += chunk.choices?.[0]?.delta?.content || '';
+      if (onToken) onToken(text);
+    }
+    return text;
+  };
+  if (!schema) return once(base);
+  try {
+    // 文法で JSON の形を固定する。対応していない組み合わせなら自由出力に切り替える。
+    return await once({ ...base, response_format: { type: 'json_object', schema: JSON.stringify(schema) } });
+  } catch (e) {
+    console.warn('JSON 指定つきの生成に失敗。自由出力でやり直します', e);
+    return once(base);
+  }
+}
+const chatText = async (prompt, onToken) => stripThink(await chat(prompt, onToken));
+const chatJSON = async (prompt, schema, onToken) => parseLoose(await chat(prompt, onToken, schema));
+const normStep = s => {
+  if (s && typeof s === 'object') s = s.tool || s.name || s.action || '';
+  return str(s).replace(/\(.*$/s, '').replace(/[`"'\s]/g, '');
+};
+function modelBrain() {
+  return {
+    kind: 'model', badge: 'モデルが生成',
+    async plan(ctx, onTok) {
+      const r = await chatJSON(plannerPrompt(ctx), PLAN_SCHEMA, onTok);
+      const steps = Array.isArray(r?.steps) ? r.steps.map(normStep).filter(Boolean) : [];
+      return { thought: str(r?.thought), steps };
+    },
+    async args(ctx, idx, onTok) {
+      const r = await chatJSON(argsPrompt(ctx, idx), argsSchema(TOOLS[ctx.plan[idx]]), onTok);
+      return r && typeof r === 'object' && !Array.isArray(r) ? r : {};
+    },
+    async judge(ctx, onTok) {
+      const r = await chatJSON(judgePrompt(ctx), JUDGE_SCHEMA, onTok);
+      if (!r) return { done: false, answer: '', feedback: '評価役の出力を JSON として読み取れませんでした。' };
+      const answer = str(r.answer).trim();
+      const done = r.done === true && answer !== '';
+      return { done, answer, feedback: done ? '' : (str(r.feedback).trim() || '道具の出力だけでは質問に答えられませんでした。') };
+    },
+    answerOnly: (ctx, onTok) => chatText(answerOnlyPrompt(ctx), onTok),
+    async pickTool(ctx, onTok) {
+      const r = await chatJSON(pickPrompt(ctx), PICK_SCHEMA, onTok);
+      const args = r && r.args && typeof r.args === 'object' && !Array.isArray(r.args) ? r.args : {};
+      return { tool: normStep(r?.tool), args };
+    },
+    answerWith: (ctx, onTok) => chatText(answerWithPrompt(ctx), onTok),
+  };
+}
+
+/* ---------- 図 ---------- */
+const NODE_META = {
+  query: { en: 'Query', ja: '質問', kind: 'input' },
+  planner: { en: 'Planner', ja: '計画役', kind: 'part' },
+  plan: { en: 'Generated plan', ja: '計画', kind: 'data' },
+  evaluator: { en: 'Evaluator', ja: '評価役', kind: 'part' },
+  executor: { en: 'Executor', ja: '実行役', kind: 'part' },
+  tools: { en: 'Tools', ja: '道具', kind: 'part' },
+  outputs: { en: 'Tool outputs', ja: '道具の出力', kind: 'data' },
+  finish: { en: 'Finish', ja: '完了', kind: 'part' },
+  model: { en: 'Model', ja: 'モデル', kind: 'part' },
+  answer: { en: 'Answer', ja: '答え', kind: 'data' },
+};
+const LAYOUTS = {
+  1: {
+    label: '段階1の図。Query から Model、Model から Answer へ矢印がのびている。',
+    wide: {
+      vb: [800, 130], fs: [14, 10.5],
+      nodes: { query: [130, 43, 120, 44], model: [340, 39, 120, 52], answer: [550, 43, 120, 44] },
+      edges: { q_m: [[250, 65], [340, 65]], m_a: [[460, 65], [550, 65]] },
+    },
+    tall: {
+      vb: [372, 110], fs: [13, 9.5],
+      nodes: { query: [10, 35, 100, 40], model: [136, 31, 100, 48], answer: [262, 35, 100, 40] },
+      edges: { q_m: [[110, 55], [136, 55]], m_a: [[236, 55], [262, 55]] },
+    },
+  },
+  2: {
+    label: '段階2の図。Query から Model へ、Model と Tools のあいだを呼び出しと出力が行き来し、Model から Answer へ矢印がのびている。',
+    wide: {
+      vb: [800, 250], fs: [14, 10.5],
+      nodes: {
+        tools: [200, 20, 120, 48], outputs: [480, 22, 130, 44],
+        query: [130, 180, 120, 44], model: [340, 176, 120, 52], answer: [550, 180, 120, 44],
+      },
+      edges: {
+        t_m: [[230, 68], [230, 140], [360, 140], [360, 176]],
+        m_t: [[390, 176], [390, 110], [290, 110], [290, 68]],
+        t_o: [[320, 44], [480, 44]],
+        o_m: [[545, 66], [545, 125], [430, 125], [430, 176]],
+        q_m: [[250, 202], [340, 202]],
+        m_a: [[460, 202], [550, 202]],
+      },
+    },
+    tall: {
+      vb: [372, 246], fs: [13, 9.5],
+      nodes: {
+        tools: [30, 14, 120, 44], outputs: [222, 14, 124, 44],
+        query: [6, 186, 96, 40], model: [136, 180, 100, 52], answer: [270, 186, 96, 40],
+      },
+      edges: {
+        t_m: [[60, 58], [60, 150], [152, 150], [152, 180]],
+        m_t: [[176, 180], [176, 110], [110, 110], [110, 58]],
+        t_o: [[150, 36], [222, 36]],
+        o_m: [[284, 58], [284, 130], [210, 130], [210, 180]],
+        q_m: [[102, 206], [136, 206]],
+        m_a: [[236, 206], [270, 206]],
+      },
+    },
+  },
+  3: {
+    label: '段階3の図。Query、Planner、Generated plan、Evaluator、Executor、Tools、Tool outputs、Finish が矢印でつながっている。',
+    wide: {
+      vb: [800, 360], fs: [14, 10.5],
+      nodes: {
+        query: [4, 255, 84, 38], planner: [114, 252, 102, 44], plan: [242, 252, 116, 44],
+        evaluator: [410, 252, 110, 44], tools: [410, 10, 110, 54], outputs: [410, 128, 110, 44],
+        executor: [572, 128, 110, 44], finish: { cx: 732, cy: 274, rx: 62, ry: 50 },
+      },
+      edges: {
+        t_p: [[410, 37], [165, 37], [165, 252]],
+        q_p: [[88, 274], [114, 274]],
+        p_g: [[216, 274], [242, 274]],
+        g_e: [[358, 274], [410, 274]],
+        e_f: [[520, 274], [670, 274]],
+        e_x: [[520, 274], [627, 274], [627, 172]],
+        e_p: [[520, 274], [627, 274], [627, 346], [165, 346], [165, 296]],
+        x_t: [[627, 128], [627, 37], [520, 37]],
+        x_o: [[572, 150], [520, 150]],
+        t_o: [[465, 64], [465, 128]],
+        o_e: [[465, 172], [465, 252]],
+      },
+    },
+    tall: {
+      vb: [372, 372], fs: [13, 9.5],
+      nodes: {
+        query: [136, 6, 100, 34], planner: [116, 62, 140, 40], plan: [116, 124, 140, 38],
+        evaluator: [116, 186, 140, 40], outputs: [34, 256, 120, 38], executor: [218, 256, 120, 38],
+        tools: [116, 318, 140, 38], finish: { cx: 314, cy: 206, rx: 42, ry: 30 },
+      },
+      edges: {
+        t_p: [[186, 356], [186, 366], [364, 366], [364, 82], [256, 82]],
+        q_p: [[186, 40], [186, 62]],
+        p_g: [[186, 102], [186, 124]],
+        g_e: [[186, 162], [186, 186]],
+        e_f: [[256, 206], [272, 206]],
+        e_x: [[226, 226], [226, 241], [278, 241], [278, 256]],
+        e_p: [[116, 206], [40, 206], [40, 82], [116, 82]],
+        x_t: [[278, 294], [278, 337], [256, 337]],
+        x_o: [[218, 275], [154, 275]],
+        t_o: [[136, 318], [136, 294]],
+        o_e: [[94, 256], [94, 241], [146, 241], [146, 226]],
+      },
+    },
+  },
+};
+const SVGNS = 'http://www.w3.org/2000/svg';
+const sv = (tag, attrs, ...kids) => {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+  for (const k of kids) el.append(k);
+  return el;
+};
+const diagram = {
+  host: $('#diagram'), layout: null, svg: null, edgeEls: {}, nodeEls: {}, dot: null,
+  current: null, animId: 0,
+  reduce: window.matchMedia('(prefers-reduced-motion: reduce)'),
+  render(name) {
+    this.layout = name;
+    const L = LAYOUTS[state.stage][name];
+    const svg = sv('svg', { viewBox: `0 0 ${L.vb[0]} ${L.vb[1]}`, role: 'img', 'aria-label': LAYOUTS[state.stage].label });
+    const gE = sv('g', {}), gN = sv('g', {});
+    this.edgeEls = {}; this.nodeEls = {};
+    for (const [id, pts] of Object.entries(L.edges)) {
+      const n = pts.length, [x1, y1] = pts[n - 2], [x2, y2] = pts[n - 1];
+      const len = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+      const bx = x2 - ux * 8, by = y2 - uy * 8;
+      const line = pts.slice(0, -1).concat([[x2 - ux * 6, y2 - uy * 6]]);
+      const g = sv('g', { class: 'edge' },
+        sv('path', { d: 'M' + line.map(p => p.join(',')).join(' L') }),
+        sv('polygon', { points: `${x2},${y2} ${bx - uy * 4.5},${by + ux * 4.5} ${bx + uy * 4.5},${by - ux * 4.5}` }));
+      g._full = sv('path', { d: 'M' + pts.map(p => p.join(',')).join(' L') });
+      gE.append(g); this.edgeEls[id] = g;
+    }
+    for (const [id, box] of Object.entries(L.nodes)) {
+      const m = NODE_META[id];
+      let shape, cx, cy;
+      if (Array.isArray(box)) {
+        const [x, y, w, hh] = box; cx = x + w / 2; cy = y + hh / 2;
+        shape = sv('rect', { class: 'shape', x, y, width: w, height: hh, rx: 4 });
+      } else {
+        ({ cx, cy } = box);
+        shape = sv('polygon', { class: 'shape', points: `${cx - box.rx},${cy} ${cx},${cy - box.ry} ${cx + box.rx},${cy} ${cx},${cy + box.ry}` });
+      }
+      const en = sv('text', { class: 'en', x: cx, y: cy - 1, 'font-size': L.fs[0] }); en.textContent = m.en;
+      const ja = sv('text', { class: 'ja', x: cx, y: cy + L.fs[1] + 3, 'font-size': L.fs[1] }); ja.textContent = m.ja;
+      const g = sv('g', { class: `node n-${id} ${m.kind}` }, shape, en, ja);
+      gN.append(g); this.nodeEls[id] = g;
+    }
+    this.dot = sv('circle', { class: 'dot', r: 5.5, cx: -20, cy: -20 });
+    this.dot.style.display = 'none';
+    svg.append(gE, gN, this.dot);
+    this.host.replaceChildren(svg); this.svg = svg; this._gE = gE;
+    if (this.current) this.show(this.current, false);
+  },
+  fit() {
+    const want = this.host.clientWidth < 560 ? 'tall' : 'wide';
+    if (want !== this.layout) this.render(want);
+  },
+  clear() { this.current = null; this.animId++; this.render(this.layout); },
+  show(hl, animate = true) {
+    this.current = hl;
+    const id = ++this.animId;
+    this.svg.style.setProperty('--step', `var(--${hl.role})`);
+    for (const [k, el] of Object.entries(this.nodeEls)) el.classList.toggle('active', hl.nodes.includes(k));
+    for (const [k, el] of Object.entries(this.edgeEls)) {
+      const on = hl.edges.includes(k);
+      el.classList.toggle('active', on);
+      if (on) this._gE.append(el);
+    }
+    if (animate && !this.reduce.matches) this.travel(hl.edges, id);
+  },
+  async travel(edges, id) {
+    const dot = this.dot;
+    for (const e of edges) {
+      const p = this.edgeEls[e]._full, len = p.getTotalLength();
+      const dur = Math.min(900, Math.max(320, len * 2.4));
+      dot.style.display = '';
+      await new Promise(res => {
+        const t0 = performance.now();
+        const f = t => {
+          if (id !== this.animId) return res();
+          const k = Math.min(1, (t - t0) / dur);
+          const ez = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+          const pt = p.getPointAtLength(len * ez);
+          dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y);
+          if (k < 1) requestAnimationFrame(f); else res();
+        };
+        requestAnimationFrame(f);
+      });
+      if (id !== this.animId) return;
+    }
+    await sleep(250);
+    if (id === this.animId) dot.style.display = 'none';
+  },
+};
+
+/* ---------- 記録（カード） ---------- */
+const logEl = $('#log'), logHint = $('#logHint');
+const slider = window.matchMedia('(max-width: 959px)');   // 狭い画面ではカードを横に並べる
+let shownCard = null, scrollTimer = 0;
+function showEmpty(text) { shownCard = null; logHint.hidden = true; logEl.replaceChildren(h('p', { class: 'empty', text })); logEl.scrollLeft = 0; }
+// 横スライドで見ているカードに合わせて、図の強調も切り替える
+function syncViewed() {
+  if (!slider.matches || state.run?.busy) return;
+  const x = logEl.getBoundingClientRect().left + 16;
+  let best = null, bd = Infinity;
+  for (const c of logEl.querySelectorAll('.card')) {
+    const d = Math.abs(c.getBoundingClientRect().left - x);
+    if (d < bd) { bd = d; best = c; }
+  }
+  if (best && best !== shownCard && best._hl) { shownCard = best; diagram.show(best._hl, false); }
+}
+logEl.addEventListener('scroll', () => { clearTimeout(scrollTimer); scrollTimer = setTimeout(syncViewed, 140); }, { passive: true });
+function addCard(run, { role, who, title, badge, lead }) {
+  run.stepNo++;
+  const body = h('div', { class: 'body' });
+  const card = h('article', { class: 'card current', style: `--c:var(--${role})` },
+    h('header', null,
+      h('span', { class: 'num', text: run.stepNo }),
+      h('span', { class: 'who', text: who }),
+      h('h2', { text: title }),
+      badge && h('span', { class: 'badge', text: badge })),
+    lead && h('p', { class: 'lead', text: lead }),
+    body);
+  logEl.querySelector('.empty')?.remove();
+  logEl.querySelector('.card.current')?.classList.remove('current');
+  logEl.append(card);
+  card._hl = diagram.current; shownCard = card;
+  logHint.hidden = run.stepNo < 2;
+  if (slider.matches) requestAnimationFrame(() => logEl.scrollTo({ left: logEl.scrollWidth, behavior: diagram.reduce.matches ? 'auto' : 'smooth' }));
+  return body;
+}
+const kv = (label, ...content) => h('div', { class: 'kv' }, h('b', { text: label }), ...content);
+const pre = text => h('pre', { text });
+const promptDetails = text => h('details', null, h('summary', { text: 'モデルに渡す指示文を見る' }), pre(text));
+const planList = (steps, bad = []) => h('ol', { class: 'plan' }, steps.map(s => h('li', { class: bad.includes(s) ? 'bad' : null }, h('code', { text: showName(s) }))));
+function liveBox(body, brain) {
+  if (brain.kind !== 'model') return { set() {}, remove() {} };
+  const el = pre('モデルが考えています…');
+  body.append(el);
+  return { set: t => { el.textContent = t || 'モデルが考えています…'; }, remove: () => el.remove() };
+}
+
+/* ---------- エージェント本体: 図 6-9 の流れをそのまま書いたもの ---------- */
+function validatePlan(steps) {
+  const unknown = steps.filter(s => !TOOLS[s]);
+  const checks = [
+    { ok: steps.length > 0, text: '計画が空でない' },
+    { ok: unknown.length === 0, text: unknown.length ? `一覧にない道具がある: ${[...new Set(unknown)].join(', ')}` : '一覧にある道具だけを使っている' },
+    { ok: steps.length <= MAX_STEPS, text: `${MAX_STEPS}ステップ以内（${steps.length}ステップ）` },
+  ];
+  const ok = checks.every(c => c.ok);
+  let feedback = '';
+  if (!ok) {
+    const why = [];
+    if (!steps.length) why.push('計画を読み取れませんでした（道具の名前が1つもありません）。');
+    if (unknown.length) why.push(`${[...new Set(unknown)].join(', ')} は道具の一覧にありません。使えるのは ${Object.keys(TOOLS).join(', ')} だけです。`);
+    if (steps.length > MAX_STEPS) why.push(`ステップが多すぎます（${MAX_STEPS}以内にしてください）。`);
+    feedback = why.join(' ');
+  }
+  return { ok, checks, unknown, feedback };
+}
+function checkArgs(name, args) {
+  const want = Object.keys(TOOLS[name].params);
+  const missing = want.filter(k => args[k] === undefined || args[k] === null || args[k] === '');
+  const extra = Object.keys(args).filter(k => !want.includes(k));
+  if (missing.length) return `引数が足りません: ${missing.join(', ')}`;
+  if (extra.length) return `この道具にない引数があります: ${extra.join(', ')}`;
+  return null;
+}
+
+const truthNote = query => {
+  const p = PRODUCTS.find(x => query.includes(x.name));
+  return p ? `店のデータでは「${p.name}」は ${p.price.toLocaleString('ja-JP')} 円です。` : null;
+};
+const nextStageBtn = (n, text) => h('button', { type: 'button', class: 'btn', text, onclick: () => setStage(n) });
+
+/* 段階 1: 答えの文を作るだけ */
+async function* answerOnlyRun(run) {
+  const { brain, ctx } = run;
+  diagram.show({ role: 'planner', nodes: ['query', 'model'], edges: ['q_m'] });
+  addCard(run, { role: 'ink', who: 'Query', title: '質問が届く', lead: 'モデルの手元にあるのは、学習で身につけた知識と、いま届いた質問文だけです。店のデータは見られません。' })
+    .append(h('p', { class: 'answer', text: ctx.query }));
+  yield;
+
+  diagram.show({ role: 'planner', nodes: ['model', 'answer'], edges: ['m_a'] });
+  const body = addCard(run, { role: 'planner', who: 'Model', title: '答えの文を作る', badge: brain.badge, lead: '知っていることだけで文を作ります。知らないことを聞かれると、答えられないか、もっともらしい内容を作ってしまいます。' });
+  const live = liveBox(body, brain);
+  const prompt = answerOnlyPrompt(ctx);
+  const text = await brain.answerOnly(ctx, live.set);
+  if (run !== state.run) return;
+  live.remove();
+  const truth = truthNote(ctx.query);
+  put(body,
+    kv('答え', h('p', { class: 'answer', text: text || '（答えが出てきませんでした）' })),
+    truth && kv('答え合わせ', h('p', { text: truth })),
+    promptDetails(prompt),
+    h('p', { class: 'lead', text: '店のデータを調べる手段があれば、当て推量をしなくて済みます。次の段階では、モデルに道具を渡します。' }),
+    nextStageBtn(2, '段階 2「道具を使うAI」へ進む'));
+}
+
+/* 段階 2: 道具を1回呼び、出力を読んで答える */
+async function* toolUseRun(run) {
+  const { brain, ctx } = run;
+  const alive = () => run === state.run;
+
+  diagram.show({ role: 'tools', nodes: ['query', 'tools', 'model'], edges: ['q_m', 't_m'] });
+  put(addCard(run, { role: 'ink', who: 'Query', title: '質問と、道具の一覧が届く', lead: '段階 1 との違いは、道具の一覧が一緒に渡されることです。道具は、店のデータを調べたり計算したりする関数です。' }),
+    h('p', { class: 'answer', text: ctx.query }), kv('道具の一覧', toolList()));
+  yield;
+
+  diagram.show({ role: 'planner', nodes: ['model', 'tools'], edges: ['m_t'] });
+  let body = addCard(run, { role: 'planner', who: 'Model', title: '道具の呼び出しを書く', badge: brain.badge, lead: 'モデルは道具を自分では動かせません。「この道具を、この引数で呼んでほしい」という文を書くだけです。' });
+  let live = liveBox(body, brain);
+  const pPrompt = pickPrompt(ctx);
+  ctx.call = await brain.pickTool(ctx, live.set);
+  if (!alive()) return;
+  live.remove();
+  put(body, kv('呼び出し', pre(showCall(ctx.call.tool || '（空）', ctx.call.args))), promptDetails(pPrompt));
+  yield;
+
+  diagram.show({ role: 'tools', nodes: ['tools', 'outputs'], edges: ['t_o'] });
+  const { tool, args } = ctx.call;
+  if (!TOOLS[tool]) ctx.output = { error: `「${tool || '（空）'}」という道具は一覧にありません` };
+  else {
+    const bad = checkArgs(tool, args);
+    if (bad) ctx.output = { error: bad };
+    else { try { ctx.output = TOOLS[tool].run(args); } catch (e) { ctx.output = { error: e.message }; } }
+  }
+  put(addCard(run, { role: 'tools', who: 'Tools', title: '道具が実行される', badge: 'コードで実行', lead: 'プログラムが呼び出しの文を読み取り、実際の関数を動かします。ここはモデルの外で起きます。' }),
+    kv(ctx.output.error ? '出力（エラー）' : '出力', pre(fmtOut(ctx.output))));
+  yield;
+
+  diagram.show({ role: 'planner', nodes: ['outputs', 'model', 'answer'], edges: ['o_m', 'm_a'] });
+  body = addCard(run, { role: 'planner', who: 'Model', title: '出力を読んで、答えを作る', badge: brain.badge, lead: '道具の出力が、質問と一緒にモデルへ戻されます。モデルはそれを読んで答えの文を作ります。' });
+  live = liveBox(body, brain);
+  const aPrompt = answerWithPrompt(ctx);
+  const text = ctx.output.error && brain.kind === 'script'
+    ? '道具がエラーになったので、答えられません。'
+    : await brain.answerWith(ctx, live.set);
+  if (!alive()) return;
+  live.remove();
+  put(body,
+    kv('答え', h('p', { class: 'answer', text: text || '（答えが出てきませんでした）' })),
+    promptDetails(aPrompt),
+    h('p', { class: 'lead', text: `道具を1回呼べば足りる質問は、これで答えられます。「${Q_MAIN}」のように、道具を何度も、正しい順番で使う質問には、計画と点検が要ります。` }),
+    nextStageBtn(3, '段階 3「エージェント」へ進む'));
+}
+
+/* 段階 3 */
+async function* agentRun(run) {
+  const { brain, ctx } = run;
+  const alive = () => run === state.run;
+
+  diagram.show({ role: 'planner', nodes: ['query', 'planner'], edges: ['q_p'] });
+  addCard(run, { role: 'ink', who: 'Query', title: '質問が届く', lead: 'ここがエージェントの入口です。質問は Planner に渡されます。' })
+    .append(h('p', { class: 'answer', text: ctx.query }));
+  yield;
+
+  diagram.show({ role: 'tools', nodes: ['tools', 'planner'], edges: ['t_p'] });
+  addCard(run, { role: 'tools', who: 'Tools', title: '使える道具の一覧が渡される', lead: 'Planner が計画に使えるのは、この一覧にある道具だけです。一覧の中身が、エージェントにできることの範囲を決めます。' })
+    .append(toolList());
+  yield;
+
+  for (ctx.attempt = 1; ctx.attempt <= MAX_ATTEMPTS; ctx.attempt++) {
+    const last = ctx.attempt === MAX_ATTEMPTS;
+    ctx.plan = []; ctx.outputs = [];
+
+    /* 1. 計画を作る */
+    diagram.show({ role: 'planner', nodes: ['planner', 'plan'], edges: ['p_g'] });
+    let body = addCard(run, {
+      role: 'planner', who: 'Planner', badge: brain.badge,
+      title: ctx.attempt === 1 ? '計画を作る' : `計画を作り直す（${ctx.attempt}回目）`,
+      lead: ctx.attempt === 1
+        ? '道具を呼ぶ順番だけを決めます。まだ何も実行しません。引数は前の道具の結果を見てから決めるので、ここでは書きません。'
+        : '差し戻された理由を読んで、計画を立て直します。',
+    });
+    let live = liveBox(body, brain);
+    const prompt = plannerPrompt(ctx);
+    run.stats.model++;
+    const p = await brain.plan(ctx, live.set);
+    if (!alive()) return;
+    live.remove();
+    ctx.plan = p.steps;
+    if (p.thought) body.append(kv('考え', h('p', { text: p.thought })));
+    body.append(kv('計画', p.steps.length ? planList(p.steps) : h('p', { text: '（読み取れる計画が出てきませんでした）' })), promptDetails(prompt));
+    yield;
+
+    /* 2. 計画を点検する（実行の前） */
+    diagram.show({ role: 'evaluator', nodes: ['plan', 'evaluator'], edges: ['g_e'] });
+    const v = validatePlan(ctx.plan);
+    body = addCard(run, { role: 'evaluator', who: 'Evaluator', title: '計画を点検する', badge: 'コードで判定', lead: '実行の前に、計画を機械的に点検します。通らなかった計画は実行されません。' });
+    put(body,
+      h('ul', { class: 'checks' }, v.checks.map(c => h('li', { class: c.ok ? null : 'ng', text: c.text }))),
+      v.unknown.length ? kv('計画', planList(ctx.plan, v.unknown)) : null,
+      h('p', { class: 'verdict ' + (v.ok ? 'ok' : 'ng'), text: v.ok ? '合格。実行に進めます。' : '不合格。この計画は実行しません。' }));
+    yield;
+
+    let feedback = v.feedback;
+    if (v.ok) {
+      diagram.show({ role: 'executor', nodes: ['evaluator', 'executor'], edges: ['e_x'] });
+      addCard(run, { role: 'executor', who: 'Executor', title: '計画を受け取る', lead: '点検を通った計画だけが Executor に渡ります。ここから順に道具を呼びます。' })
+        .append(planList(ctx.plan));
+      yield;
+
+      /* 3. 計画を実行する */
+      let failed = null;
+      for (let i = 0; i < ctx.plan.length; i++) {
+        const name = ctx.plan[i], tool = TOOLS[name];
+        const needsArgs = Object.keys(tool.params).length > 0;
+        diagram.show({ role: 'executor', nodes: ['executor', 'tools'], edges: ['x_t'] }, false);
+        body = addCard(run, {
+          role: 'executor', who: 'Executor', badge: needsArgs ? brain.badge : 'コードで実行',
+          title: `道具を呼ぶ（${i + 1}/${ctx.plan.length}）`,
+          lead: needsArgs
+            ? (i === 0 ? 'ここで初めて引数を決めて、道具を呼び出します。' : 'これまでの出力を見て引数を決め、次の道具を呼び出します。')
+            : 'この道具には引数がないので、そのまま呼び出します。',
+        });
+        let args = {}, aPrompt = null;
+        if (needsArgs) {
+          live = liveBox(body, brain);
+          aPrompt = argsPrompt(ctx, i);
+          run.stats.model++;
+          args = await brain.args(ctx, i, live.set);
+          if (!alive()) return;
+          live.remove();
+        }
+        const bad = checkArgs(name, args);
+        let output;
+        if (bad) {
+          output = { error: bad };
+          diagram.show({ role: 'executor', nodes: ['executor', 'outputs'], edges: ['x_o'] });
+          body.parentElement._hl = diagram.current;
+        } else {
+          run.stats.tool++;
+          try { output = tool.run(args); } catch (e) { output = { error: e.message }; }
+          diagram.show({ role: 'executor', nodes: ['executor', 'tools', 'outputs'], edges: ['x_t', 't_o'] });
+          body.parentElement._hl = diagram.current;
+        }
+        ctx.outputs.push({ tool: name, args, output });
+        put(body, kv('呼び出し', pre(showCall(name, args))), kv(output.error ? '出力（エラー）' : '出力', pre(fmtOut(output))), aPrompt && promptDetails(aPrompt));
+        if (output.error) { failed = { i, name, msg: output.error }; }
+        yield;
+        if (failed) break;
+      }
+
+      /* 4. 結果を確かめる */
+      diagram.show({ role: 'evaluator', nodes: ['outputs', 'evaluator'], edges: ['o_e'] });
+      if (failed) {
+        feedback = `ステップ${failed.i + 1}の ${failed.name} がエラーになりました: ${failed.msg}`;
+        body = addCard(run, { role: 'evaluator', who: 'Evaluator', title: '結果を確かめる', badge: 'コードで判定', lead: '道具の出力にエラーがあるので、モデルに聞くまでもなく不合格にします。' });
+        body.append(h('p', { class: 'verdict ng', text: 'まだ答えられません。' }), kv('理由', h('p', { text: feedback })));
+      } else {
+        body = addCard(run, { role: 'evaluator', who: 'Evaluator', title: '結果を確かめる', badge: brain.badge, lead: '道具の出力で質問に答えられるかを判定します。' });
+        live = liveBox(body, brain);
+        const jPrompt = judgePrompt(ctx);
+        run.stats.model++;
+        const j = await brain.judge(ctx, live.set);
+        if (!alive()) return;
+        live.remove();
+        if (j.done) {
+          body.append(h('p', { class: 'verdict ok', text: '答えられます。' }), kv('答えの案', h('p', { text: j.answer })), promptDetails(jPrompt));
+          yield;
+          diagram.show({ role: 'finish', nodes: ['evaluator', 'finish'], edges: ['e_f'] });
+          addCard(run, { role: 'finish', who: 'Finish', title: '答えを返す' }).append(
+            h('p', { class: 'answer', text: j.answer }),
+            h('p', { class: 'stats', text: statsText(run) }));
+          return;
+        }
+        feedback = j.feedback;
+        body.append(h('p', { class: 'verdict ng', text: 'まだ答えられません。' }), kv('理由', h('p', { text: feedback })), promptDetails(jPrompt));
+      }
+      yield;
+    }
+
+    /* 5. 差し戻す（または打ち切る） */
+    ctx.history.push({ plan: ctx.plan, feedback });
+    if (last) break;
+    diagram.show({ role: 'evaluator', nodes: ['evaluator', 'planner'], edges: ['e_p'] });
+    addCard(run, { role: 'evaluator', who: 'Evaluator', title: 'Planner に差し戻す', lead: '理由を添えて Planner に戻します。Planner は次の計画でこの理由を読みます。' })
+      .append(kv('添える理由', h('p', { text: feedback })));
+    yield;
+  }
+
+  diagram.show({ role: 'error', nodes: ['evaluator', 'finish'], edges: ['e_f'] });
+  addCard(run, { role: 'error', who: 'Finish', title: '打ち切る', lead: `計画を${MAX_ATTEMPTS}回作っても答えに届かなかったので、ここで止めます。回数の上限がないと、エージェントは時間と計算を使い続けてしまいます。` })
+    .append(h('p', { class: 'answer', text: '答えを出せませんでした。' }), h('p', { class: 'stats', text: statsText(run) }));
+}
+const statsText = run => `計画 ${run.ctx.attempt}回、道具の呼び出し ${run.stats.tool}回、モデルの呼び出し ${run.stats.model}回${run.brain.kind === 'script' ? '（台本では代役）' : ''}`;
+
+/* ---------- 画面の状態と操作 ---------- */
+const state = { stage: 1, mode: 'script', scene: SCENES[0], run: null, auto: false };
+const STAGE_DESC = {
+  1: '質問を受け取り、学習した知識だけで答えの文を作ります。',
+  2: '道具の一覧を渡されたモデルは、道具を呼び、その出力を読んでから答えを作ります。',
+  3: '道具を何度も使う質問では、計画を立て、点検し、実行し、結果を確かめます。',
+};
+const el = {
+  next: $('#nextBtn'), auto: $('#autoBtn'), reset: $('#resetBtn'),
+  modeScript: $('#modeScript'), modeModel: $('#modeModel'),
+  scriptBox: $('#scriptBox'), modelBox: $('#modelBox'),
+  sceneSel: $('#sceneSel'), sceneField: $('#sceneField'), modelField: $('#modelField'), stage: $('.stage'), sceneQuery: $('#sceneQuery'),
+  modelSel: $('#modelSel'), loadBtn: $('#loadBtn'), loadBar: $('#loadBar'), status: $('#modelStatus'),
+  query: $('#queryInput'), chips: $('#chips'),
+  stageBtns: [...document.querySelectorAll('.stages button')],
+};
+const modelReady = () => llm.engine && llm.modelId === el.modelSel.value;
+const currentQuery = () => (state.mode !== 'script' ? el.query.value.trim() : state.stage === 3 ? state.scene.query : Q_SIMPLE);
+
+function newRun() {
+  const run = {
+    brain: state.mode === 'script' ? scriptedBrain(state.scene) : modelBrain(),
+    ctx: { query: currentQuery(), attempt: 1, plan: [], outputs: [], history: [] },
+    stats: { tool: 0, model: 0 }, stepNo: 0, busy: false, finished: false, gen: null,
+  };
+  run.gen = [answerOnlyRun, toolUseRun, agentRun][state.stage - 1](run);
+  return run;
+}
+function reset() {
+  state.auto = false;
+  if (state.run?.busy && llm.engine) { try { llm.engine.interruptGenerate(); } catch {} }
+  state.run = null;
+  diagram.clear();
+  showEmpty(state.mode === 'model' && !modelReady()
+    ? 'モデルを読み込むと動かせます。読み込みを待つあいだは「台本で動かす」で流れを見られます。'
+    : `${STAGE_DESC[state.stage]}「次のステップ」を押すと、質問が${state.stage === 3 ? ' Planner ' : 'モデル'}に届きます。`);
+  syncControls();
+}
+function syncControls() {
+  const r = state.run;
+  const blocked = state.mode === 'model' && (!modelReady() || !currentQuery());
+  el.next.disabled = !!(r?.busy || r?.finished || blocked);
+  el.auto.disabled = !!(r?.finished || blocked);
+  el.auto.textContent = state.auto ? '止める' : '自動で進める';
+  el.auto.setAttribute('aria-pressed', String(state.auto));
+  el.next.classList.toggle('primary', !r?.finished);
+  el.reset.classList.toggle('primary', !!r?.finished);
+}
+async function nextStep() {
+  if (!state.run) {
+    state.run = newRun();
+    if (diagram.layout === 'tall' && Math.abs(el.stage.getBoundingClientRect().top - 8) > 16) {
+      window.scrollTo({ top: window.scrollY + el.stage.getBoundingClientRect().top - 8, behavior: diagram.reduce.matches ? 'auto' : 'smooth' });
+    }
+  }
+  const run = state.run;
+  if (run.busy || run.finished) return;
+  run.busy = true; syncControls();
+  try {
+    const r = await run.gen.next();
+    if (r.done) run.finished = true;
+  } catch (e) {
+    console.error(e);
+    if (run === state.run) {
+      run.finished = true;
+      addCard(run, { role: 'error', who: 'エラー', title: 'このステップを実行できませんでした', lead: 'モデルの呼び出しが失敗しました。「最初から」でやり直すか、別のモデルを読み込んでください。' })
+        .append(pre(str(e?.message || e)));
+    }
+  }
+  run.busy = false;
+  if (run === state.run) syncControls();
+}
+async function autoLoop() {
+  while (state.auto && !(state.run?.finished)) {
+    await nextStep();
+    if (state.run?.finished) break;
+    await sleep(1500);
+  }
+  state.auto = false; syncControls();
+}
+function syncSetup() {
+  const { mode, stage } = state;
+  el.stageBtns.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.stage === stage)));
+  el.modeScript.setAttribute('aria-pressed', String(mode === 'script'));
+  el.modeModel.setAttribute('aria-pressed', String(mode === 'model'));
+  el.scriptBox.hidden = mode !== 'script';
+  el.sceneField.hidden = !(mode === 'script' && stage === 3);
+  el.modelBox.hidden = el.modelField.hidden = el.loadBtn.hidden = mode !== 'model';
+  el.sceneQuery.textContent = currentQuery();
+}
+function setMode(mode) {
+  state.mode = mode;
+  syncSetup();
+  if (mode === 'model') describeModelState();
+  reset();
+}
+function setStage(n) {
+  state.stage = n;
+  el.query.value = n === 3 ? Q_MAIN : Q_SIMPLE;
+  syncSetup();
+  reset();
+}
+function setStatus(text, cls) { el.status.textContent = text; el.status.className = 'status' + (cls ? ' ' + cls : ''); }
+function describeModelState() {
+  if (llm.loading) return;
+  if (modelReady()) setStatus('読み込み済みです。「次のステップ」で動かせます。', 'ok');
+  else if (!navigator.gpu) setStatus('このブラウザは WebGPU に対応していません。PC の Chrome か Edge で開いてください。', 'err');
+  else setStatus('初回はモデルのダウンロードに数分かかります。2回目からはブラウザに保存されたものを使います。');
+}
+async function loadModel() {
+  if (llm.loading) return;
+  if (!navigator.gpu) { describeModelState(); return; }
+  const id = el.modelSel.value;
+  llm.loading = true; el.loadBtn.disabled = true; el.modelSel.disabled = true;
+  el.loadBar.hidden = false; el.loadBar.firstElementChild.style.width = '0%';
+  setStatus('ライブラリを取得しています…');
+  try {
+    const webllm = await import(WEBLLM_URL);
+    if (llm.engine) { try { await llm.engine.unload(); } catch {} llm.engine = null; }
+    const engine = await webllm.CreateMLCEngine(id, {
+      initProgressCallback: r => {
+        el.loadBar.firstElementChild.style.width = Math.round((r.progress || 0) * 100) + '%';
+        setStatus(`読み込み中 ${Math.round((r.progress || 0) * 100)}%  ${r.text || ''}`);
+      },
+    });
+    llm.engine = engine; llm.modelId = id;
+    llm.loading = false;
+    describeModelState();
+  } catch (e) {
+    console.error(e);
+    llm.loading = false;
+    setStatus(`モデルを読み込めませんでした。チャット内のプレビューなど、外部からのダウンロードが止められている場所では動きません。このHTMLを自分のサーバーに置いて、PC の Chrome か Edge で開いてください。（${str(e?.message || e).slice(0, 160)}）`, 'err');
+  }
+  el.loadBar.hidden = true; el.loadBtn.disabled = false; el.modelSel.disabled = false;
+  if (state.mode === 'model') reset();
+}
+
+/* ---------- 初期化 ---------- */
+SCENES.forEach((s, i) => el.sceneSel.append(h('option', { value: i, text: `${i + 1}. ${s.label}` })));
+MODELS.forEach(m => el.modelSel.append(h('option', { value: m.id, text: m.label })));
+el.query.value = Q_SIMPLE;
+[Q_SIMPLE, Q_MAIN, '先週の売上トップ2の価格を合計するといくら？'].forEach(q =>
+  el.chips.append(h('button', { type: 'button', text: q, onclick: () => { el.query.value = q; reset(); } })));
+
+el.next.addEventListener('click', nextStep);
+el.auto.addEventListener('click', () => { state.auto = !state.auto; syncControls(); if (state.auto) autoLoop(); });
+el.reset.addEventListener('click', reset);
+el.modeScript.addEventListener('click', () => setMode('script'));
+el.modeModel.addEventListener('click', () => setMode('model'));
+el.sceneSel.addEventListener('change', () => { state.scene = SCENES[+el.sceneSel.value]; syncSetup(); reset(); });
+el.stageBtns.forEach(b => b.addEventListener('click', () => setStage(+b.dataset.stage)));
+el.modelSel.addEventListener('change', () => { describeModelState(); reset(); });
+el.loadBtn.addEventListener('click', loadModel);
+el.query.addEventListener('input', reset);
+document.addEventListener('keydown', e => {
+  if (e.key !== 'ArrowRight' || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName || '')) return;
+  if (!el.next.disabled) { e.preventDefault(); nextStep(); }
+});
+
+diagram.render(diagram.host.clientWidth < 560 ? 'tall' : 'wide');
+new ResizeObserver(() => diagram.fit()).observe(diagram.host);
+syncSetup();
+reset();
+
+// テスト用の窓口（動作には不要）
+window.__demo = { TOOLS, SCENES, state, nextStep, setStage, validatePlan, parseLoose, normStep, calc };
+})();
+</script>
+</body>
+</html>
