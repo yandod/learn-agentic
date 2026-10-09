@@ -200,6 +200,9 @@ ul.tools span{font-size:13px;color:var(--muted)}
 .palette button{width:22px;height:22px;padding:0;border:1px solid var(--line);border-radius:4px;background:var(--sw);cursor:pointer}
 .palette button.erase{background:repeating-conic-gradient(#C9CFD6 0 25%,#FFFFFF 0 50%) 50%/8px 8px}
 .palette button[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:1px}
+.tool-note{margin:0;font-size:12px;line-height:1.5;color:var(--muted)}
+.desk .mini{justify-self:start;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:2px 10px;min-height:30px;font-size:12px;cursor:pointer}
+.desk .mini:hover{border-color:var(--ink)}
 
 footer{margin-top:28px;font-size:13px;color:var(--muted)}
 footer a{color:inherit}
@@ -210,7 +213,7 @@ footer a{color:inherit}
 <div class="wrap">
   <header class="masthead">
     <h1>エージェントが質問に答えるまで</h1>
-    <p>答えの文を作るだけのAIから、道具を使うAI、そしてエージェントへ。最後はページの中のブラウザ・電卓・ドット絵キャンバスを道具としてつなぎます。4つの段階を順に、一歩ずつ進めて見るデモです。</p>
+    <p>答えの文を作るだけのAIから、道具を使うAI、そしてエージェントへ。最後はページの中のブラウザ・電卓・お絵かきキャンバスを道具としてつなぎます。4つの段階を順に、一歩ずつ進めて見るデモです。</p>
   </header>
 
   <nav class="stages" aria-label="段階">
@@ -264,9 +267,11 @@ footer a{color:inherit}
             <div class="keys" id="calcKeys"></div>
           </div>
           <div class="tool-box pixel" id="boxPixel">
-            <p class="tool-title">🎨 ドット絵<code>draw_pixels</code></p>
-            <canvas id="pixCanvas" width="320" height="320" role="img" aria-label="16×16 のドット絵キャンバス"></canvas>
+            <p class="tool-title">🎨 お絵かき<code>draw_shape ほか3つ</code></p>
+            <canvas id="pixCanvas" width="480" height="480" role="img" aria-label="お絵かきキャンバス"></canvas>
             <div class="palette" id="palette"></div>
+            <button type="button" class="mini" id="pixClear">🧽 キャンバスを消す</button>
+            <p class="tool-note" id="lookNote" role="status" hidden></p>
           </div>
         </div>
       </section>
@@ -415,29 +420,59 @@ const PAL = {
   b: ['青', '#2F6FD6'], s: ['水色', '#7CC6F2'], p: ['桃', '#F29BB8'], n: ['茶', '#8A5A35'],
 };
 const PIX = 16;
+const COLOR_NAMES = Object.values(PAL).filter(([, hex]) => hex).map(([name]) => name);
+const SHAPE_NAMES = ['ハート', '星', '丸', '四角', '三角', 'マグカップ', '花', '家'];
+const SIZES = { 大: [14, '大きい'], 中: [7, '中くらいの'], 小: [5, '小さい'] };
+const PLACES = { 中央: [8, 8], 左上: [4, 4], 右上: [12, 4], 左下: [4, 12], 右下: [12, 12] };
 const DESK_TOOLS = {
   open_page: {
     emoji: '🌐',
     desc: `ブラウザで店のサイト（${SITE}/）のページを開き、題名・本文・リンクを返す`,
     params: { url: { type: 'string', desc: '開くページの URL' } },
+    rules: [`URL は、最初はトップページ ${SITE}/ 。そのあとは、開いたページの links にある URL から選ぶ。`],
     run: ({ url }) => desk.openPage(url),
   },
   calculator: {
     emoji: '🧮',
     desc: '電卓のキーを押して式を計算する',
     params: { expression: { type: 'string', desc: '数字と + - * / ( ) . だけの式' } },
+    rules: ['計算式には、出力に書かれた値段の数字をそのまま使う。'],
     run: ({ expression }) => desk.calculate(expression),
   },
-  draw_pixels: {
+  draw_shape: {
     emoji: '🎨',
-    desc: `ドット絵キャンバス（${PIX}×${PIX}）に絵を描く。前の絵は消える`,
+    desc: 'お絵かきキャンバスに、決まった形を1つ描く。前に描いた絵は残る。いまキャンバスにある絵の一覧を返す',
     params: {
-      art: {
-        type: 'string',
-        desc: `絵。1行を${PIX}文字までにして、行を / で区切る（${PIX}行まで）。文字の意味: ${Object.entries(PAL).map(([c, [name]]) => `${c} ${name}`).join(', ')}`,
-      },
+      shape: { type: 'string', enum: SHAPE_NAMES, desc: `形。${SHAPE_NAMES.join(', ')} のどれか` },
+      color: { type: 'string', enum: COLOR_NAMES, desc: `色。${COLOR_NAMES.join(', ')} のどれか` },
+      size: { type: 'string', enum: Object.keys(SIZES), desc: `大きさ。${Object.keys(SIZES).join(', ')} のどれか` },
+      position: { type: 'string', enum: Object.keys(PLACES), desc: `描く場所。${Object.keys(PLACES).join(', ')} のどれか` },
     },
-    run: ({ art }) => desk.draw(art),
+    rules: [
+      '形と色は、質問とこれまでの出力に書かれたとおりにする。',
+      '大きさは、質問に「小さい」とあれば 小、「大きい」「大きく」とあれば 大 にする。書かれていなければ 大 にする。',
+      '場所は、質問に書かれていればそのとおりにする。書かれていなければ 中央 にする。',
+    ],
+    run: a => desk.drawShape(a),
+  },
+  look_at_canvas: {
+    emoji: '👀',
+    desc: 'お絵かきキャンバスの全体を、画像を見分けるモデルで見て、何の形に見えるかを返す。何も変えない',
+    params: {},
+    badge: () => (state.mode === 'script' ? '台本（見るモデルの代役）' : '見るモデルが判定'),
+    run: () => desk.look(),
+  },
+  view_canvas: {
+    emoji: '📋',
+    desc: 'お絵かきキャンバスのいまの状態（描いた絵の一覧と、マス目）を返す。何も変えない',
+    params: {},
+    run: () => desk.view(),
+  },
+  clear_canvas: {
+    emoji: '🧽',
+    desc: 'お絵かきキャンバスをすべて消して、空にする',
+    params: {},
+    run: () => desk.clear(),
   },
 };
 
@@ -455,6 +490,7 @@ const KITS = {
       '「先週」は、今日を含む直近7日間とする。',
       '同じ道具を2回呼ぶ計画なら、まだ調べていないものを選ぶ。',
     ],
+    judgeRules: [],
     toolsLead: 'Planner が計画に使えるのは、この一覧にある道具だけです。一覧の中身が、エージェントにできることの範囲を決めます。',
     runNote: '',
   },
@@ -463,18 +499,26 @@ const KITS = {
     planRules: [
       '商品名や値段は、サイトで調べてから使う。思い込みで決めない。',
       `サイトはトップページ（${SITE}/）から開き、リンクをたどる。`,
+      '質問に答えるのに要らない道具は、計画に入れない。絵を描くだけなら、サイトも電卓も使わない。',
+      '絵は draw_shape で描く。1回の呼び出しで形を1つ描く。',
+      'draw_shape は前の絵を消さない。絵を描き直すときは、先に clear_canvas で消す。',
+      '描いた絵が何に見えるかを確かめるように頼まれたら、描いたあとに look_at_canvas を使う。',
     ],
     planExamples: `質問: 「128×45 はいくつ？」
 {"thought":"電卓で計算すればよい。","steps":["calculator"]}
 質問: 「店のサイトで、いちばん安い商品を調べて」
-{"thought":"トップページを開いてリンクを確かめ、商品一覧のページを開く。","steps":["open_page","open_page"]}`,
-    argRules: [
-      '値は、質問とこれまでの出力から読み取る。出力にない商品名や値段を作らない。',
-      `URL は、最初はトップページ ${SITE}/ 。そのあとは、開いたページの links にある URL から選ぶ。`,
-      '計算式には、出力に書かれた値段の数字をそのまま使う。',
-      'ドット絵は、質問に出てきたものの形を、決められた文字だけで描く。',
+{"thought":"トップページを開いてリンクを確かめ、商品一覧のページを開く。","steps":["open_page","open_page"]}
+質問: 「黄色い星を描いて」
+{"thought":"キャンバスを空にしてから星を描く。","steps":["clear_canvas","draw_shape"]}
+質問: 「緑の家を描いて、家に見えるか確かめて」
+{"thought":"キャンバスを空にして家を描き、そのあと絵を見て確かめる。","steps":["clear_canvas","draw_shape","look_at_canvas"]}`,
+    argRules: ['値は、質問とこれまでの出力から読み取る。出力にない商品名や値段を作らない。'],
+    judgeRules: [
+      '「描いて」と頼まれたときは、最後の draw_shape か view_canvas の出力の shapes（いまキャンバスにある絵）を見る。頼まれた形と色の絵だけがあれば、答えられることにして、answer に描いたものを書く。',
+      'shapes の形や色が頼まれたものと違うとき、頼まれていない絵が残っているときは、足りないことにする。',
+      'look_at_canvas の出力があるときは、looks_like が頼まれた形で、main_color が頼まれた色なら、答えられることにする。違えば足りないことにする。',
     ],
-    toolsLead: '今回の道具は、図の下の作業台に置いたブラウザ・電卓・ドット絵キャンバスです。呼び出すと、画面の上で実際に動きます。',
+    toolsLead: '今回の道具は、図の下の作業台に置いたブラウザ・電卓・お絵かきキャンバスです。呼び出すと、画面の上で実際に動きます。',
     runNote: '作業台の道具が画面の上で動きます。',
   },
 };
@@ -540,7 +584,7 @@ ${t.desc}
 ${ps}
 
 決まり:
-${KIT.argRules.map(r => `- ${r}`).join('\n')}
+${[...KIT.argRules, ...(t.rules || [])].map(r => `- ${r}`).join('\n')}
 
 引数を JSON だけで答えてください。`;
 }
@@ -551,7 +595,7 @@ function judgePrompt(ctx) {
 
 道具の出力:
 ${historyText(ctx.outputs)}
-
+${KIT.judgeRules.length ? `\n決まり:\n${KIT.judgeRules.map(r => `- ${r}`).join('\n')}\n` : ''}
 答えられるとき: {"done": true, "answer": "質問への答え（日本語で1〜2文）", "feedback": ""}
 足りないとき: {"done": false, "answer": "", "feedback": "何が足りないか、次の計画への助言"}
 
@@ -582,7 +626,7 @@ const PLAN_SCHEMA = { type: 'object', properties: { thought: { type: 'string' },
 const JUDGE_SCHEMA = { type: 'object', properties: { done: { type: 'boolean' }, answer: { type: 'string' }, feedback: { type: 'string' } }, required: ['done', 'answer', 'feedback'] };
 const argsSchema = t => ({
   type: 'object',
-  properties: Object.fromEntries(Object.entries(t.params).map(([k, p]) => [k, { type: p.type }])),
+  properties: Object.fromEntries(Object.entries(t.params).map(([k, p]) => [k, p.enum ? { type: p.type, enum: p.enum } : { type: p.type }])),
   required: Object.keys(t.params),
 });
 
@@ -624,37 +668,24 @@ const SCENES = [
     ],
   },
 ];
-const Q_DESK = 'お店のサイトで今月のおすすめ商品を調べて、3個買うといくらか計算し、その商品をドット絵で描いて';
-const MUG_ART = [
-  '................',
-  '.....a...a......',
-  '......a...a.....',
-  '.....a...a......',
-  '................',
-  '..kkkkkkkkkk....',
-  '..kwwwwwwwwk....',
-  '..kbbbbbbbbkkk..',
-  '..kwwwwwwwwk.k..',
-  '..kwwwwwwwwk.k..',
-  '..kbbbbbbbbkkk..',
-  '..kwwwwwwwwk....',
-  '..kwwwwwwwwk....',
-  '...kkkkkkkk.....',
-  '................',
-].join('/');
+const Q_DESK = 'お店のサイトで今月のおすすめ商品を調べて、3個買うといくらか計算し、その商品の絵を描いて';
+const Q_HEART = '赤いハートを大きく描いて';
+const Q_LOOK = '青い星を描いて、星に見えるか確かめて';
+const MUG = { shape: 'マグカップ', color: '白', size: '大', position: '中央' };
 const priceIn = text => Number((/([\d,]+)\s*円/.exec(text) || [, '0'])[1].replace(/,/g, ''));
 const DESK_GOOD = {
-  thought: 'おすすめ商品も値段も、まだわからない。トップページを開き、おすすめのページへ進んで値段を読む。その値段で計算してから、絵を描く。',
-  steps: ['open_page', 'open_page', 'calculator', 'draw_pixels'],
+  thought: 'おすすめ商品も値段も、まだわからない。トップページを開き、おすすめのページへ進んで値段を読む。その値段で計算してから、キャンバスを空にして絵を描く。',
+  steps: ['open_page', 'open_page', 'calculator', 'clear_canvas', 'draw_shape'],
   args: [
     () => ({ url: `${SITE}/` }),
     o => ({ url: o[0].output.links.find(l => l.text.includes('おすすめ')).url }),
     o => ({ expression: `${priceIn(o[1].output.text)}*3` }),
-    () => ({ art: MUG_ART }),
+    null,
+    () => ({ ...MUG }),
   ],
   judge: o => ({
     done: true, feedback: '',
-    answer: `今月のおすすめは「旅するマグカップ」（${priceIn(o[1].output.text).toLocaleString('ja-JP')} 円）で、3個だと ${o[2].output.result.toLocaleString('ja-JP')} 円です。キャンバスにマグカップを描きました。`,
+    answer: `今月のおすすめは「旅するマグカップ」（${priceIn(o[1].output.text).toLocaleString('ja-JP')} 円）で、3個だと ${o[2].output.result.toLocaleString('ja-JP')} 円です。キャンバスに${o[4].output.drawn}を描きました。`,
   }),
 };
 const DESK_SCENES = [
@@ -664,8 +695,8 @@ const DESK_SCENES = [
     attempts: [
       {
         thought: 'おすすめはたぶんマグカップで、1,500 円くらいのはず。すぐ計算して絵を描けばよい。',
-        steps: ['calculator', 'draw_pixels'],
-        args: [() => ({ expression: '1500*3' }), () => ({ art: MUG_ART })],
+        steps: ['calculator', 'draw_shape'],
+        args: [() => ({ expression: '1500*3' }), () => ({ ...MUG })],
         judge: () => ({ done: false, answer: '', feedback: '1500 円という値段は、どの道具の出力にもありません。おすすめ商品も値段も、サイトで確かめてから計算してください。' }),
       },
       { ...DESK_GOOD, thought: '値段を思い込みで決めていた。まずサイトのトップページを開き、おすすめのページで商品名と値段を読んでから計算する。' },
@@ -676,11 +707,44 @@ const DESK_SCENES = [
     attempts: [
       {
         thought: 'おすすめのページは /osusume にあるはず。そこで値段を読んで計算し、絵を描く。',
-        steps: ['open_page', 'calculator', 'draw_pixels'],
+        steps: ['open_page', 'calculator', 'draw_shape'],
         args: [() => ({ url: `${SITE}/osusume` })],
         judge: null,
       },
       { ...DESK_GOOD, thought: 'URL を推測したら、ページがなかった。トップページを開いて、リンクから本当の URL を選ぶ。' },
+    ],
+  },
+  {
+    id: 'heart', label: 'ちがう絵を描いてしまい、消して描き直す', query: Q_HEART,
+    attempts: [
+      {
+        thought: 'ハートを描けばよい。',
+        steps: ['draw_shape'],
+        args: [() => ({ shape: 'ハート', color: '桃', size: '小', position: '左上' })],
+        judge: o => ({ done: false, answer: '', feedback: `shapes を見ると、描かれているのは「${o[0].output.drawn}」です。頼まれたのは赤くて大きいハートです。前の絵は残るので、消してから描き直してください。` }),
+      },
+      {
+        thought: '色と大きさをまちがえた。draw_shape は前の絵を消さないので、まず clear_canvas で消す。赤い大きいハートを描いたら、view_canvas でキャンバスを確かめる。',
+        steps: ['clear_canvas', 'draw_shape', 'view_canvas'],
+        args: [null, () => ({ shape: 'ハート', color: '赤', size: '大', position: '中央' })],
+        judge: o => ({ done: true, feedback: '', answer: `キャンバスに${o[2].output.shapes[0]}を描きました。最初の絵は消して、描き直しました。` }),
+      },
+    ],
+  },
+  {
+    id: 'look', label: '描いた絵を、見る道具で確かめる', query: Q_LOOK,
+    attempts: [
+      {
+        thought: 'キャンバスを空にして青い星を描く。モデルには絵が見えないので、look_at_canvas で画像を見分けるモデルに見てもらう。',
+        steps: ['clear_canvas', 'draw_shape', 'look_at_canvas'],
+        args: [null, () => ({ shape: '星', color: '青', size: '大', position: '中央' })],
+        judge: o => {
+          const seen = o[2].output;
+          return seen.looks_like === '星' && seen.main_color === '青'
+            ? { done: true, feedback: '', answer: `青い星を描きました。見る道具にも「${seen.main_color}の${seen.looks_like}」に見えています。` }
+            : { done: false, answer: '', feedback: `見る道具には「${seen.main_color}の${seen.looks_like}」に見えています。頼まれたのは青い星です。` };
+        },
+      },
     ],
   },
 ];
@@ -880,7 +944,7 @@ const LAYOUTS = {
   },
 };
 // 段階 4 はエージェントの形はそのままで、道具だけを入れ替える
-LAYOUTS[4] = { ...LAYOUTS[3], label: '段階4の図。段階3と同じく、Query、Planner、Generated plan、Evaluator、Executor、Tools、Tool outputs、Finish が矢印でつながっている。Tools は作業台のブラウザ・電卓・ドット絵キャンバス。' };
+LAYOUTS[4] = { ...LAYOUTS[3], label: '段階4の図。段階3と同じく、Query、Planner、Generated plan、Evaluator、Executor、Tools、Tool outputs、Finish が矢印でつながっている。Tools は作業台のブラウザ・電卓・お絵かきキャンバス。' };
 const SVGNS = 'http://www.w3.org/2000/svg';
 const sv = (tag, attrs, ...kids) => {
   const el = document.createElementNS(SVGNS, tag);
@@ -972,7 +1036,7 @@ const diagram = {
   },
 };
 
-/* ---------- 作業台: ページの中に置いたブラウザ・電卓・ドット絵キャンバス ---------- */
+/* ---------- 作業台: ページの中に置いたブラウザ・電卓・お絵かきキャンバス ---------- */
 // 道具として呼ばれると画面の上で動く。人が手で触ることもできる。
 const PAGES = {
   '/': {
@@ -1001,7 +1065,7 @@ const KEY_LABEL = { '/': '÷', '*': '×', '-': '−' };
 const prettyExpr = s => s.replace(/[/*-]/g, c => KEY_LABEL[c]);
 
 const desk = (() => {
-  const box = { open_page: $('#boxBrowser'), calculator: $('#boxCalc'), draw_pixels: $('#boxPixel') };
+  const box = { open_page: $('#boxBrowser'), calculator: $('#boxCalc'), canvas: $('#boxPixel') };
   let gen = 0;   // 「最初から」で増やす。動いている途中の道具はこれを見て止まる
   const wait = async (ms, g) => {
     if (!diagram.reduce.matches) await sleep(ms);
@@ -1086,52 +1150,138 @@ const desk = (() => {
     return { expression: keys.join(''), result: calc(keys.join('')) };   // 式がおかしければここで理由つきのエラーになる
   }
 
-  /* ドット絵キャンバス */
-  const cv = $('#pixCanvas'), g2 = cv.getContext('2d'), cell = cv.width / PIX;
-  const px = Array(PIX * PIX).fill('.');
+  /* お絵かきキャンバス */
+  // 絵は 1マスを FINE×FINE に割った細かい点で持つ。モデルに返すマス目と、手で塗る単位は PIX×PIX のまま
+  const FINE = 3, N = PIX * FINE;
+  const cv = $('#pixCanvas'), g2 = cv.getContext('2d'), cell = cv.width / N;
+  const px = Array(N * N).fill('.');
   let color = 'k';
   function paint() {
-    g2.fillStyle = '#F3F5F8'; g2.fillRect(0, 0, cv.width, cv.height);
-    px.forEach((c, i) => { if (c !== '.') { g2.fillStyle = PAL[c][1]; g2.fillRect((i % PIX) * cell, Math.floor(i / PIX) * cell, cell, cell); } });
-    g2.strokeStyle = 'rgba(24,33,43,.10)'; g2.lineWidth = 1;
+    g2.fillStyle = '#DDE2E8'; g2.fillRect(0, 0, cv.width, cv.height);
+    px.forEach((c, i) => { if (c !== '.') { g2.fillStyle = PAL[c][1]; g2.fillRect((i % N) * cell, Math.floor(i / N) * cell, cell, cell); } });
+    g2.strokeStyle = 'rgba(24,33,43,.07)'; g2.lineWidth = 1;
     g2.beginPath();
-    for (let i = 1; i < PIX; i++) { const v = i * cell + .5; g2.moveTo(v, 0); g2.lineTo(v, cv.height); g2.moveTo(0, v); g2.lineTo(cv.width, v); }
+    for (let i = 1; i < PIX; i++) { const v = i * FINE * cell + .5; g2.moveTo(v, 0); g2.lineTo(v, cv.height); g2.moveTo(0, v); g2.lineTo(cv.width, v); }
     g2.stroke();
   }
-  function parseArt(art) {
-    const s = (Array.isArray(art) ? art.join('/') : str(art)).replace(/\\n/g, '\n').trim();
-    if (!s) throw new Error('art が空です');
-    const rows = s.split(/[\/\n]/).map(r => r.replace(/\s+$/, '').replace(/ /g, '.').toLowerCase());
-    while (rows.length && !rows[rows.length - 1]) rows.pop();
-    if (rows.length > PIX) throw new Error(`${PIX}行までにしてください（${rows.length}行あります）`);
-    rows.forEach((r, i) => {
-      if (r.length > PIX) throw new Error(`${i + 1}行目が${PIX}文字を超えています（${r.length}文字）`);
-      const bad = [...r].find(c => !PAL[c]);
-      if (bad) throw new Error(`${i + 1}行目の「${bad}」は使えない文字です。使えるのは ${Object.keys(PAL).join(' ')} だけです`);
-    });
-    if (!rows.join('').replace(/\./g, '')) throw new Error('色のついたドットが1つもありません');
-    return rows;
-  }
-  async function draw(art, g) {
-    mark('draw_pixels');
-    const rows = parseArt(art);
-    px.fill('.'); paint();
-    for (let y = 0; y < rows.length; y++) {
-      await wait(45, g);
-      [...rows[y]].forEach((c, x) => { px[y * PIX + x] = c; });
+  // 形の中かどうかを、-1〜1 の座標（u は左から右、v は上から下）で答える。色の文字を返すと、そのマスだけ別の色になる
+  const STAR = Array.from({ length: 10 }, (_, i) => { const a = Math.PI * (i / 5 - .5), r = i % 2 ? .44 : 1.05; return [r * Math.cos(a), r * Math.sin(a) + .08]; });
+  const inPoly = (pts, u, v) => pts.reduce((inside, [x1, y1], i) => {
+    const [x2, y2] = pts[(i + 1) % pts.length];
+    return (y1 > v) !== (y2 > v) && u < x1 + (v - y1) / (y2 - y1) * (x2 - x1) ? !inside : inside;
+  }, false);
+  const SHAPES = {
+    ハート: (u, v) => { const x = u * 1.2, y = .1 - v * 1.15, a = x * x + y * y - 1; return a * a * a - x * x * y * y * y <= 0; },
+    星: (u, v) => inPoly(STAR, u, v),
+    丸: (u, v) => u * u + v * v <= 1,
+    四角: (u, v) => Math.abs(u) <= .86 && Math.abs(v) <= .86,
+    三角: (u, v) => Math.abs(u) <= (v + 1) / 2,
+    マグカップ: (u, v) => { const r = Math.hypot(u - .35, v - .05); return (u >= -.9 && u <= .35 && v >= -.7 && v <= .85) || (u > .35 && r <= .55 && r >= .32); },
+    花: (u, v, c) => (u * u + v * v <= .1 ? (c === 'y' ? 'o' : 'y')
+      : [0, 1, 2, 3, 4].some(i => Math.hypot(u - .58 * Math.cos(Math.PI * (i * .4 - .5)), v - .58 * Math.sin(Math.PI * (i * .4 - .5))) <= .42)),
+    家: (u, v, c) => (v < -.1 ? Math.abs(u) <= (v + 1) / .9
+      : Math.abs(u) <= .72 && (Math.abs(u) <= .2 && v >= .3 ? (c === 'n' ? 'k' : 'n') : true)),
+  };
+  const drawn = [], drawnShapes = [];   // draw_shape で描いた絵を、言葉で覚えておく（drawnShapes は形の名前だけ）
+  let byHand = false;
+  const pick = (table, v, what) => {
+    const s = str(v).trim(), k = Object.keys(table).find(n => n === s) ?? Object.keys(table).find(n => n === s.replace(/(い|色)$/, ''));
+    if (k === undefined) throw new Error(`${what}「${s}」は選べません。選べるのは ${Object.keys(table).join(', ')} です`);
+    return k;
+  };
+  const COLOR_CHARS = Object.fromEntries(Object.entries(PAL).filter(([, [, hex]]) => hex).map(([c, [name]]) => [name, c]));
+  // モデルに返すマス目。1マスの色は、その真ん中の点で決める
+  const coarse = () => Array.from({ length: PIX }, (_, y) => Array.from({ length: PIX }, (_, x) => px[(y * FINE + 1) * N + x * FINE + 1]).join(''));
+  const filled = () => coarse().join('').replace(/\./g, '').length;
+  async function drawShape(a, g) {
+    mark('canvas');
+    const shape = pick(SHAPES, a.shape, '形'), colorName = pick(COLOR_CHARS, a.color, '色');
+    const size = pick(SIZES, a.size, '大きさ'), place = pick(PLACES, a.position, '場所');
+    const n = SIZES[size][0] * FINE, c = COLOR_CHARS[colorName];
+    const [x0, y0] = PLACES[place].map(p => Math.max(0, Math.min(N - n, Math.round(p * FINE - n / 2))));
+    for (let y = 0; y < n; y++) {
+      if (y % FINE === 0) await wait(45, g);
+      for (let x = 0; x < n; x++) {
+        const hit = SHAPES[shape]((x + .5) / n * 2 - 1, (y + .5) / n * 2 - 1, c);
+        if (hit) px[(y0 + y) * N + x0 + x] = hit === true ? c : hit;
+      }
       paint();
     }
-    const used = [...new Set(px.filter(c => c !== '.'))];
-    return { size: `${PIX}x${PIX}`, rows: rows.length, filled_pixels: px.filter(c => c !== '.').length, colors: used.map(c => PAL[c][0]) };
+    const label = `${colorName}の${SIZES[size][1]}${shape}（${place}）`;
+    drawn.push(label); drawnShapes.push(shape);
+    return { drawn: label, shapes: drawn.slice(), filled_pixels: filled() };
+  }
+  // いまの絵を、モデルが読める形で返す。絵の一覧（言葉）と、マス目（上の行から順、1文字が1マス）
+  async function view(g) {
+    mark('canvas');
+    await wait(250, g);
+    const canvas = coarse(), legend = { '.': '空き' };
+    for (const c of Object.keys(PAL)) if (c !== '.' && canvas.some(r => r.includes(c))) legend[c] = PAL[c][0];
+    return {
+      shapes: drawn.slice(), ...(byHand ? { note: '手で描いたマスもあります（shapes には入っていません）' } : {}),
+      canvas, legend, filled_pixels: filled(),
+    };
+  }
+  // 見る道具: 画像を見分ける小さなモデル（CLIP）にキャンバスの画像を渡す。モデルは最初に呼ばれたときだけ読み込む
+  const TRANSFORMERS_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5';
+  const SHAPE_EN = { ハート: 'heart', 星: 'star', 丸: 'circle', 四角: 'square', 三角: 'triangle', マグカップ: 'mug', 花: 'flower', 家: 'house' };
+  const lookNote = $('#lookNote');
+  const note = text => { lookNote.hidden = !text; lookNote.textContent = text || ''; };
+  let eye = null;
+  const loadEye = () => (eye ||= (async () => {
+    const T = await import(TRANSFORMERS_URL);
+    return T.pipeline('zero-shot-image-classification', 'Xenova/clip-vit-base-patch32', { device: 'wasm', dtype: 'q8' });
+  })().catch(e => { eye = null; throw new Error(`見るモデルを読み込めませんでした（${str(e?.message || e).slice(0, 120)}）`); }));
+  const mainColor = () => {   // 色はマス目を数えればわかるので、モデルには聞かない
+    const counts = {};
+    for (const c of coarse().join('')) if (c !== '.') counts[c] = (counts[c] || 0) + 1;
+    return PAL[Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0]][0];
+  };
+  async function look(g) {
+    mark('canvas');
+    if (!filled()) { note('👀 何も描かれていません'); return { looks_like: 'なし', note: 'キャンバスには何も描かれていません' }; }
+    if (state.mode === 'script') {
+      // 台本では見るモデルも代役。最後に draw_shape で描いた形を、そのまま答える
+      await wait(400, g);
+      if (!drawnShapes.length) { note('👀 台本（代役）: わかりません'); return { looks_like: 'わからない', note: '台本の代役は、draw_shape で描いた絵だけを答えます' }; }
+      const shape = drawnShapes[drawnShapes.length - 1], main = mainColor();
+      note(`👀 台本（代役）: ${main}の${shape}に見えます`);
+      return { looks_like: shape, main_color: main, candidates: [{ shape, score: 1 }] };
+    }
+    note(eye ? '👀 見ています…' : '👀 見るモデルを読み込んでいます…（初回は1分ほどかかります）');
+    let seen;
+    try {
+      const clf = await loadEye();
+      seen = await clf(cv.toDataURL('image/png'), Object.values(SHAPE_EN), { hypothesis_template: 'pixel art of a {}' });
+    } catch (e) { note(`👀 ${e.message}`); throw e; }
+    if (g !== gen) throw new Error('作業台がリセットされました');
+    const candidates = seen.slice(0, 3).map(s => ({ shape: Object.keys(SHAPE_EN).find(k => SHAPE_EN[k] === s.label), score: Math.round(s.score * 100) / 100 }));
+    const main = mainColor();
+    note(`👀 ${main}の${candidates[0].shape}に見えます（確からしさ ${candidates[0].score}）`);
+    return { looks_like: candidates[0].shape, main_color: main, candidates };
+  }
+  const wipe = () => { px.fill('.'); drawn.length = drawnShapes.length = 0; byHand = false; note(''); paint(); };
+  async function clear(g) {
+    mark('canvas');
+    await wait(250, g);
+    const cleared = filled();
+    wipe();
+    return { cleared_pixels: cleared, shapes: [], filled_pixels: 0 };
   }
   const at = e => {
     const r = cv.getBoundingClientRect();
     const x = Math.floor((e.clientX - r.left) / r.width * PIX), y = Math.floor((e.clientY - r.top) / r.height * PIX);
-    return x >= 0 && x < PIX && y >= 0 && y < PIX ? y * PIX + x : -1;
+    return x >= 0 && x < PIX && y >= 0 && y < PIX ? [x, y] : null;
   };
-  const dab = e => { const i = at(e); if (i >= 0 && px[i] !== color) { px[i] = color; paint(); } };
+  const dab = e => {
+    const p = at(e);
+    if (!p) return;
+    for (let dy = 0; dy < FINE; dy++) for (let dx = 0; dx < FINE; dx++) px[(p[1] * FINE + dy) * N + p[0] * FINE + dx] = color;
+    byHand = true; paint();
+  };
   cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); dab(e); });
   cv.addEventListener('pointermove', e => { if (e.buttons) dab(e); });
+  $('#pixClear').addEventListener('click', wipe);
   const palEl = $('#palette'), swatches = [];
   for (const [c, [name, hex]] of Object.entries(PAL)) {
     const b = h('button', { type: 'button', class: hex ? null : 'erase', title: hex ? name : '消しゴム', 'aria-label': hex ? name : '消しゴム', 'aria-pressed': String(c === color), style: hex ? `--sw:${hex}` : null,
@@ -1139,12 +1289,15 @@ const desk = (() => {
     swatches.push(b); palEl.append(b);
   }
 
-  function reset() { gen++; mark(null); renderPage(null); press('C'); px.fill('.'); paint(); }
+  function reset() { gen++; mark(null); renderPage(null); press('C'); wipe(); }
   return {
     reset,
     openPage: u => openPage(u, gen),
     calculate: e => calculate(e, gen),
-    draw: a => draw(a, gen),
+    drawShape: a => drawShape(a, gen),
+    view: () => view(gen),
+    look: () => look(gen),
+    clear: () => clear(gen),
   };
 })();
 
@@ -1365,7 +1518,7 @@ async function* agentRun(run) {
         const needsArgs = Object.keys(tool.params).length > 0;
         diagram.show({ role: 'executor', nodes: ['executor', 'tools'], edges: ['x_t'] }, false);
         body = addCard(run, {
-          role: 'executor', who: 'Executor', badge: needsArgs ? brain.badge : 'コードで実行',
+          role: 'executor', who: 'Executor', badge: needsArgs ? brain.badge : (tool.badge?.() || 'コードで実行'),
           title: `道具を呼ぶ（${i + 1}/${ctx.plan.length}）`,
           lead: (needsArgs
             ? (i === 0 ? 'ここで初めて引数を決めて、道具を呼び出します。' : 'これまでの出力を見て引数を決め、次の道具を呼び出します。')
@@ -1421,7 +1574,7 @@ async function* agentRun(run) {
           put(addCard(run, { role: 'finish', who: 'Finish', title: '答えを返す' }),
             h('p', { class: 'answer', text: j.answer }),
             h('p', { class: 'stats', text: statsText(run) }),
-            state.stage === 3 && h('p', { class: 'lead', text: '道具は、関数のほかに画面の部品でもかまいません。次の段階では、ページの中のブラウザ・電卓・ドット絵キャンバスを道具としてつなぎます。' }),
+            state.stage === 3 && h('p', { class: 'lead', text: '道具は、関数のほかに画面の部品でもかまいません。次の段階では、ページの中のブラウザ・電卓・お絵かきキャンバスを道具としてつなぎます。' }),
             state.stage === 3 && nextStageBtn(4, '段階 4「画面の道具をつなぐ」へ進む'));
           return;
         }
@@ -1453,7 +1606,7 @@ const STAGE_DESC = {
   1: '質問を受け取り、学習した知識だけで答えの文を作ります。',
   2: '道具の一覧を渡されたモデルは、道具を呼び、その出力を読んでから答えを作ります。',
   3: '道具を何度も使う質問では、計画を立て、点検し、実行し、結果を確かめます。',
-  4: 'エージェントの形は段階 3 と同じまま、道具を作業台のブラウザ・電卓・ドット絵キャンバスに入れ替えます。道具を呼ぶと、作業台が実際に動きます。',
+  4: 'エージェントの形は段階 3 と同じまま、道具を作業台のブラウザ・電卓・お絵かきキャンバスに入れ替えます。道具を呼ぶと、作業台が実際に動きます。',
 };
 const el = {
   next: $('#nextBtn'), auto: $('#autoBtn'), reset: $('#resetBtn'),
@@ -1549,7 +1702,7 @@ function setMode(mode) {
 }
 const CHIPS = {
   shop: [Q_SIMPLE, Q_MAIN, '先週の売上トップ2の価格を合計するといくら？'],
-  desk: [Q_DESK, 'お知らせを見て、星空ノートを5冊フェアの値段で買うといくらか計算して', '赤いハートをドット絵で描いて'],
+  desk: [Q_DESK, 'お知らせを見て、星空ノートを5冊フェアの値段で買うといくらか計算して', Q_HEART, '小さい黄色の星を右上に描いて', Q_LOOK],
 };
 function setStage(n) {
   state.stage = n;
@@ -1621,7 +1774,7 @@ new ResizeObserver(() => diagram.fit()).observe(diagram.host);
 setStage(1);
 
 // テスト用の窓口（動作には不要）
-window.__demo = { get TOOLS() { return KIT.tools; }, KITS, SCENES, DESK_SCENES, state, nextStep, setStage, validatePlan, parseLoose, normStep, calc, desk };
+window.__demo = { get TOOLS() { return KIT.tools; }, KITS, SCENES, DESK_SCENES, state, nextStep, setStage, validatePlan, parseLoose, normStep, calc, desk, llm, chat, argsPrompt, judgePrompt, argsSchema };
 })();
 </script>
 </body>
