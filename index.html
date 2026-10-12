@@ -46,7 +46,8 @@ button,input,select{font:inherit;color:inherit}
 @media (max-width:560px){.masthead p{font-size:13px;line-height:1.6}.wrap{padding-top:14px}}
 
 /* stages */
-.stages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:16px 0 0}
+.stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:16px 0 0}
+@media (max-width:560px){.stages{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .stages button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;min-height:52px;cursor:pointer;text-align:left;line-height:1.35;font-weight:500;font-size:14px}
 .stages button small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
 .stages button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:700}
@@ -170,6 +171,36 @@ ul.tools{margin:0;padding:0;list-style:none;display:grid;gap:6px}
 ul.tools code{display:block;overflow-wrap:anywhere}
 ul.tools span{font-size:13px;color:var(--muted)}
 
+/* workbench (stage 4) */
+.desk{margin-top:10px;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:10px}
+.desk-head{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;margin:0 2px 8px;font-size:12px;color:var(--muted)}
+.desk-head b{font-size:14px;color:var(--ink)}
+.desk-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);gap:8px}
+@media (max-width:560px){.desk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.desk .browser{grid-column:1/-1}}
+.tool-box{border:1px solid var(--rule);border-radius:8px;padding:8px;display:grid;gap:6px;align-content:start;min-width:0;transition:border-color .2s,box-shadow .2s}
+.tool-box.active{border-color:var(--tools);box-shadow:0 0 0 2px color-mix(in srgb,var(--tools) 28%,transparent)}
+.tool-title{margin:0;font-size:13px;font-weight:700;line-height:1.4}
+.tool-title code{font-weight:400;font-size:11px;color:var(--muted);margin-left:4px}
+.desk input[type="text"]{min-height:30px;padding:2px 10px;border-radius:999px;font-family:var(--mono);font-size:12px}
+.page{height:176px;overflow:auto;background:var(--paper);border-radius:6px;padding:8px 10px;font-size:13px;line-height:1.6}
+.page h3{margin:0 0 4px;font-size:14px}
+.page p{margin:0 0 4px}
+.page .blank{color:var(--muted)}
+.page .links{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:6px}
+.page .links button{border:0;background:none;padding:2px 0;color:var(--planner);text-decoration:underline;cursor:pointer;font-size:13px}
+.calc-disp{background:var(--paper);border-radius:6px;padding:4px 8px;text-align:right;font-family:var(--mono);display:grid;min-height:54px}
+.calc-disp small{font-size:11px;color:var(--muted);min-height:1.5em;overflow-wrap:anywhere}
+.calc-disp output{font-size:19px;line-height:1.3;overflow-wrap:anywhere}
+.keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.keys button{min-height:32px;padding:0;border:1px solid var(--line);background:var(--surface);border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:14px}
+.keys button.op{background:var(--paper)}
+.keys button.on{background:var(--tools);border-color:var(--tools);color:var(--surface)}
+#pixCanvas{display:block;width:100%;height:auto;aspect-ratio:1;image-rendering:pixelated;border-radius:4px;touch-action:none;cursor:crosshair}
+.palette{display:flex;flex-wrap:wrap;gap:4px}
+.palette button{width:22px;height:22px;padding:0;border:1px solid var(--line);border-radius:4px;background:var(--sw);cursor:pointer}
+.palette button.erase{background:repeating-conic-gradient(#C9CFD6 0 25%,#FFFFFF 0 50%) 50%/8px 8px}
+.palette button[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:1px}
+
 footer{margin-top:28px;font-size:13px;color:var(--muted)}
 footer a{color:inherit}
 @media (prefers-reduced-motion:reduce){*{transition:none !important}}
@@ -179,13 +210,14 @@ footer a{color:inherit}
 <div class="wrap">
   <header class="masthead">
     <h1>エージェントが質問に答えるまで</h1>
-    <p>答えの文を作るだけのAIから、道具を使うAI、そしてエージェントへ。3つの段階を順に、一歩ずつ進めて見るデモです。</p>
+    <p>答えの文を作るだけのAIから、道具を使うAI、そしてエージェントへ。最後はページの中のブラウザ・電卓・ドット絵キャンバスを道具としてつなぎます。4つの段階を順に、一歩ずつ進めて見るデモです。</p>
   </header>
 
   <nav class="stages" aria-label="段階">
     <button type="button" data-stage="1" aria-pressed="true"><small>段階 1</small>答えるだけのAI</button>
     <button type="button" data-stage="2" aria-pressed="false"><small>段階 2</small>道具を使うAI</button>
     <button type="button" data-stage="3" aria-pressed="false"><small>段階 3</small>エージェント</button>
+    <button type="button" data-stage="4" aria-pressed="false"><small>段階 4</small>画面の道具をつなぐ</button>
   </nav>
 
   <section class="setup" aria-label="設定">
@@ -218,6 +250,26 @@ footer a{color:inherit}
         <div id="diagram"></div>
         <div class="legend"><span><i></i>実線は係（部品）</span><span><i class="d"></i>破線は受け渡されるデータ</span></div>
       </div>
+      <section class="desk" id="desk" aria-label="作業台" hidden>
+        <p class="desk-head"><b>作業台</b><span>エージェントが道具として操作します。手で触ることもできます。</span></p>
+        <div class="desk-grid">
+          <div class="tool-box browser" id="boxBrowser">
+            <p class="tool-title">🌐 ブラウザ<code>open_page</code></p>
+            <form id="brForm"><input type="text" id="brUrl" aria-label="URL" placeholder="https://shop.example/" autocomplete="off" spellcheck="false"></form>
+            <div class="page" id="brPage" aria-live="polite"></div>
+          </div>
+          <div class="tool-box calc" id="boxCalc">
+            <p class="tool-title">🧮 電卓<code>calculator</code></p>
+            <div class="calc-disp"><small id="calcExpr"></small><output id="calcVal">0</output></div>
+            <div class="keys" id="calcKeys"></div>
+          </div>
+          <div class="tool-box pixel" id="boxPixel">
+            <p class="tool-title">🎨 ドット絵<code>draw_pixels</code></p>
+            <canvas id="pixCanvas" width="320" height="320" role="img" aria-label="16×16 のドット絵キャンバス"></canvas>
+            <div class="palette" id="palette"></div>
+          </div>
+        </div>
+      </section>
       <div class="controls">
         <button type="button" class="btn primary" id="nextBtn">次のステップ</button>
         <button type="button" class="btn" id="autoBtn" aria-pressed="false">自動で進める</button>
@@ -231,7 +283,7 @@ footer a{color:inherit}
   </div>
 
   <footer>
-    <p>図と用語は Chip Huyen <a href="https://huyenchip.com/2025/01/07/agents.html" target="_blank" rel="noopener">“Agents”</a>（2025）の図 6-9 をもとにしています。店も商品も売上も架空のデータで、店の「今日」は 2030-09-13 に固定しています。</p>
+    <p>図と用語は Chip Huyen <a href="https://huyenchip.com/2025/01/07/agents.html" target="_blank" rel="noopener">“Agents”</a>（2025）の図 6-9 をもとにしています。店も商品も売上も、段階 4 のサイト（shop.example）も架空のデータで、店の「今日」は 2030-09-13 に固定しています。</p>
   </footer>
 </div>
 
@@ -304,7 +356,7 @@ function calc(expr) {
   return Math.round(v * 1e6) / 1e6;
 }
 
-const TOOLS = {
+const SHOP_TOOLS = {
   get_today_date: {
     emoji: '📅',
     desc: '今日の日付を返す',
@@ -354,20 +406,93 @@ const TOOLS = {
     run: ({ expression }) => ({ result: calc(expression) }),
   },
 };
+
+/* ---------- 段階 4 の道具: ページの中の作業台を操作する（中身は後ろの desk） ---------- */
+const SITE = 'https://shop.example';
+const PAL = {
+  '.': ['空き', null], k: ['黒', '#1B1F24'], w: ['白', '#FFFFFF'], a: ['灰', '#9AA3AD'],
+  r: ['赤', '#E0453A'], o: ['橙', '#F08A24'], y: ['黄', '#F5CF3A'], g: ['緑', '#3FA34D'],
+  b: ['青', '#2F6FD6'], s: ['水色', '#7CC6F2'], p: ['桃', '#F29BB8'], n: ['茶', '#8A5A35'],
+};
+const PIX = 16;
+const DESK_TOOLS = {
+  open_page: {
+    emoji: '🌐',
+    desc: `ブラウザで店のサイト（${SITE}/）のページを開き、題名・本文・リンクを返す`,
+    params: { url: { type: 'string', desc: '開くページの URL' } },
+    run: ({ url }) => desk.openPage(url),
+  },
+  calculator: {
+    emoji: '🧮',
+    desc: '電卓のキーを押して式を計算する',
+    params: { expression: { type: 'string', desc: '数字と + - * / ( ) . だけの式' } },
+    run: ({ expression }) => desk.calculate(expression),
+  },
+  draw_pixels: {
+    emoji: '🎨',
+    desc: `ドット絵キャンバス（${PIX}×${PIX}）に絵を描く。前の絵は消える`,
+    params: {
+      art: {
+        type: 'string',
+        desc: `絵。1行を${PIX}文字までにして、行を / で区切る（${PIX}行まで）。文字の意味: ${Object.entries(PAL).map(([c, [name]]) => `${c} ${name}`).join(', ')}`,
+      },
+    },
+    run: ({ art }) => desk.draw(art),
+  },
+};
+
+// 道具の一式と、それに合わせた指示文の決まり。段階で切り替える。
+const KITS = {
+  shop: {
+    tools: SHOP_TOOLS,
+    planRules: ['「先週」「今月」のように今日を基準にした期間は、今日の日付を調べてから決める。'],
+    planExamples: `質問: 「星空ノートはいくら？」
+{"thought":"商品情報を引けば価格がわかる。","steps":["fetch_product_info"]}
+質問: 「先週いちばん売れた商品は？」
+{"thought":"先週の範囲を決めるために今日の日付が要る。そのあと売上順を調べる。","steps":["get_today_date","fetch_top_products"]}`,
+    argRules: [
+      '値は、質問とこれまでの出力から読み取る。出力にない商品名や日付を作らない。',
+      '「先週」は、今日を含む直近7日間とする。',
+      '同じ道具を2回呼ぶ計画なら、まだ調べていないものを選ぶ。',
+    ],
+    toolsLead: 'Planner が計画に使えるのは、この一覧にある道具だけです。一覧の中身が、エージェントにできることの範囲を決めます。',
+    runNote: '',
+  },
+  desk: {
+    tools: DESK_TOOLS,
+    planRules: [
+      '商品名や値段は、サイトで調べてから使う。思い込みで決めない。',
+      `サイトはトップページ（${SITE}/）から開き、リンクをたどる。`,
+    ],
+    planExamples: `質問: 「128×45 はいくつ？」
+{"thought":"電卓で計算すればよい。","steps":["calculator"]}
+質問: 「店のサイトで、いちばん安い商品を調べて」
+{"thought":"トップページを開いてリンクを確かめ、商品一覧のページを開く。","steps":["open_page","open_page"]}`,
+    argRules: [
+      '値は、質問とこれまでの出力から読み取る。出力にない商品名や値段を作らない。',
+      `URL は、最初はトップページ ${SITE}/ 。そのあとは、開いたページの links にある URL から選ぶ。`,
+      '計算式には、出力に書かれた値段の数字をそのまま使う。',
+      'ドット絵は、質問に出てきたものの形を、決められた文字だけで描く。',
+    ],
+    toolsLead: '今回の道具は、図の下の作業台に置いたブラウザ・電卓・ドット絵キャンバスです。呼び出すと、画面の上で実際に動きます。',
+    runNote: '作業台の道具が画面の上で動きます。',
+  },
+};
+let KIT = KITS.shop;
 const MAX_STEPS = 6, MAX_ATTEMPTS = 3;
-const sig = name => `${name}(${Object.keys(TOOLS[name].params).join(', ')})`;
+const sig = name => `${name}(${Object.keys(KIT.tools[name].params).join(', ')})`;
 const fmtCall = (name, args) => `${name}(${Object.entries(args || {}).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ')})`;
 const fmtOut = o => JSON.stringify(o, null, 2);
 // 画面に見せるときだけ絵文字を付ける（モデルに渡す指示文では素の名前のまま）
-const em = name => TOOLS[name]?.emoji || '❓';
+const em = name => KIT.tools[name]?.emoji || '❓';
 const showName = name => `${em(name)} ${name}`;
 const showSig = name => `${em(name)} ${sig(name)}`;
 const showCall = (name, args) => `${em(name)} ${fmtCall(name, args)}`;
-const toolList = () => h('ul', { class: 'tools' }, Object.keys(TOOLS).map(n => h('li', null, h('code', { text: showSig(n) }), h('span', { text: TOOLS[n].desc }))));
+const toolList = () => h('ul', { class: 'tools' }, Object.keys(KIT.tools).map(n => h('li', null, h('code', { text: showSig(n) }), h('span', { text: KIT.tools[n].desc }))));
 
 /* ---------- モデルに渡す指示文（台本モードでも同じものを見せる） ---------- */
 function plannerPrompt(ctx) {
-  const inv = Object.keys(TOOLS).map(n => `- ${sig(n)}: ${TOOLS[n].desc}`).join('\n');
+  const inv = Object.keys(KIT.tools).map(n => `- ${sig(n)}: ${KIT.tools[n].desc}`).join('\n');
   let hist = '';
   if (ctx.history.length) {
     hist = '\nこれまでの計画と、差し戻された理由:\n' + ctx.history.map((x, i) =>
@@ -382,13 +507,10 @@ ${inv}
 - 上の道具だけを使う。
 - 引数は書かない（実行のときに決める）。
 - ${MAX_STEPS}ステップ以内。
-- 「先週」「今月」のように今日を基準にした期間は、今日の日付を調べてから決める。
+${KIT.planRules.map(r => `- ${r}`).join('\n')}
 
 例:
-質問: 「星空ノートはいくら？」
-{"thought":"商品情報を引けば価格がわかる。","steps":["fetch_product_info"]}
-質問: 「先週いちばん売れた商品は？」
-{"thought":"先週の範囲を決めるために今日の日付が要る。そのあと売上順を調べる。","steps":["get_today_date","fetch_top_products"]}
+${KIT.planExamples}
 ${hist}
 質問: 「${ctx.query}」
 JSON だけで答えてください。`;
@@ -399,7 +521,7 @@ function historyText(outputs) {
     : '（まだありません）';
 }
 function argsPrompt(ctx, idx) {
-  const name = ctx.plan[idx], t = TOOLS[name];
+  const name = ctx.plan[idx], t = KIT.tools[name];
   const planLine = ctx.plan.map((n, i) => `${i + 1}. ${n}${i < idx ? '（済み）' : i === idx ? '（いまここ）' : ''}`).join('\n');
   const ps = Object.entries(t.params).map(([k, p]) => `- ${k}（${p.type === 'integer' ? '整数' : '文字列'}）: ${p.desc}`).join('\n');
   return `あなたはエージェントの「Executor（実行役）」です。計画の次の道具を呼ぶための引数を決めてください。
@@ -418,9 +540,7 @@ ${t.desc}
 ${ps}
 
 決まり:
-- 値は、質問とこれまでの出力から読み取る。出力にない商品名や日付を作らない。
-- 「先週」は、今日を含む直近7日間とする。
-- 同じ道具を2回呼ぶ計画なら、まだ調べていないものを選ぶ。
+${KIT.argRules.map(r => `- ${r}`).join('\n')}
 
 引数を JSON だけで答えてください。`;
 }
@@ -441,7 +561,7 @@ const answerOnlyPrompt = ctx => `次の質問に、日本語で1〜2文で答え
 
 質問: 「${ctx.query}」`;
 function pickPrompt(ctx) {
-  const inv = Object.keys(TOOLS).map(n => `- ${sig(n)}: ${TOOLS[n].desc}`).join('\n');
+  const inv = Object.keys(KIT.tools).map(n => `- ${sig(n)}: ${KIT.tools[n].desc}`).join('\n');
   return `質問に答えるために、道具を1つ選んで呼び出してください。
 
 使える道具:
@@ -504,6 +624,67 @@ const SCENES = [
     ],
   },
 ];
+const Q_DESK = 'お店のサイトで今月のおすすめ商品を調べて、3個買うといくらか計算し、その商品をドット絵で描いて';
+const MUG_ART = [
+  '................',
+  '.....a...a......',
+  '......a...a.....',
+  '.....a...a......',
+  '................',
+  '..kkkkkkkkkk....',
+  '..kwwwwwwwwk....',
+  '..kbbbbbbbbkkk..',
+  '..kwwwwwwwwk.k..',
+  '..kwwwwwwwwk.k..',
+  '..kbbbbbbbbkkk..',
+  '..kwwwwwwwwk....',
+  '..kwwwwwwwwk....',
+  '...kkkkkkkk.....',
+  '................',
+].join('/');
+const priceIn = text => Number((/([\d,]+)\s*円/.exec(text) || [, '0'])[1].replace(/,/g, ''));
+const DESK_GOOD = {
+  thought: 'おすすめ商品も値段も、まだわからない。トップページを開き、おすすめのページへ進んで値段を読む。その値段で計算してから、絵を描く。',
+  steps: ['open_page', 'open_page', 'calculator', 'draw_pixels'],
+  args: [
+    () => ({ url: `${SITE}/` }),
+    o => ({ url: o[0].output.links.find(l => l.text.includes('おすすめ')).url }),
+    o => ({ expression: `${priceIn(o[1].output.text)}*3` }),
+    () => ({ art: MUG_ART }),
+  ],
+  judge: o => ({
+    done: true, feedback: '',
+    answer: `今月のおすすめは「旅するマグカップ」（${priceIn(o[1].output.text).toLocaleString('ja-JP')} 円）で、3個だと ${o[2].output.result.toLocaleString('ja-JP')} 円です。キャンバスにマグカップを描きました。`,
+  }),
+};
+const DESK_SCENES = [
+  { id: 'desk', label: '3つの道具を順に使う', query: Q_DESK, attempts: [DESK_GOOD] },
+  {
+    id: 'guess', label: '値段を調べずに計算してしまう', query: Q_DESK,
+    attempts: [
+      {
+        thought: 'おすすめはたぶんマグカップで、1,500 円くらいのはず。すぐ計算して絵を描けばよい。',
+        steps: ['calculator', 'draw_pixels'],
+        args: [() => ({ expression: '1500*3' }), () => ({ art: MUG_ART })],
+        judge: () => ({ done: false, answer: '', feedback: '1500 円という値段は、どの道具の出力にもありません。おすすめ商品も値段も、サイトで確かめてから計算してください。' }),
+      },
+      { ...DESK_GOOD, thought: '値段を思い込みで決めていた。まずサイトのトップページを開き、おすすめのページで商品名と値段を読んでから計算する。' },
+    ],
+  },
+  {
+    id: 'badurl', label: 'ページの URL を当てずっぽうで開く', query: Q_DESK,
+    attempts: [
+      {
+        thought: 'おすすめのページは /osusume にあるはず。そこで値段を読んで計算し、絵を描く。',
+        steps: ['open_page', 'calculator', 'draw_pixels'],
+        args: [() => ({ url: `${SITE}/osusume` })],
+        judge: null,
+      },
+      { ...DESK_GOOD, thought: 'URL を推測したら、ページがなかった。トップページを開いて、リンクから本当の URL を選ぶ。' },
+    ],
+  },
+];
+const SCENES_BY_STAGE = { 3: SCENES, 4: DESK_SCENES };
 function scriptedBrain(scene) {
   const att = ctx => scene.attempts[Math.min(ctx.attempt, scene.attempts.length) - 1];
   return {
@@ -572,7 +753,7 @@ function modelBrain() {
       return { thought: str(r?.thought), steps };
     },
     async args(ctx, idx, onTok) {
-      const r = await chatJSON(argsPrompt(ctx, idx), argsSchema(TOOLS[ctx.plan[idx]]), onTok);
+      const r = await chatJSON(argsPrompt(ctx, idx), argsSchema(KIT.tools[ctx.plan[idx]]), onTok);
       return r && typeof r === 'object' && !Array.isArray(r) ? r : {};
     },
     async judge(ctx, onTok) {
@@ -698,6 +879,8 @@ const LAYOUTS = {
     },
   },
 };
+// 段階 4 はエージェントの形はそのままで、道具だけを入れ替える
+LAYOUTS[4] = { ...LAYOUTS[3], label: '段階4の図。段階3と同じく、Query、Planner、Generated plan、Evaluator、Executor、Tools、Tool outputs、Finish が矢印でつながっている。Tools は作業台のブラウザ・電卓・ドット絵キャンバス。' };
 const SVGNS = 'http://www.w3.org/2000/svg';
 const sv = (tag, attrs, ...kids) => {
   const el = document.createElementNS(SVGNS, tag);
@@ -789,6 +972,182 @@ const diagram = {
   },
 };
 
+/* ---------- 作業台: ページの中に置いたブラウザ・電卓・ドット絵キャンバス ---------- */
+// 道具として呼ばれると画面の上で動く。人が手で触ることもできる。
+const PAGES = {
+  '/': {
+    title: 'そらいろ雑貨店',
+    text: ['ようこそ。毎日をすこし楽しくする雑貨を集めた、小さなお店です。', '下のリンクから、おすすめや商品の一覧を見られます。'],
+    links: [['今月のおすすめ', '/pickup'], ['商品一覧', '/products'], ['お知らせ', '/news']],
+  },
+  '/pickup': {
+    title: '今月のおすすめ',
+    text: ['今月のおすすめは「旅するマグカップ」です。', '価格は 1,980 円（税込）。旅先の空を思わせる青いラインが入った、白いマグカップです。'],
+    links: [['商品一覧', '/products'], ['トップへ戻る', '/']],
+  },
+  '/products': {
+    title: '商品一覧',
+    text: PRODUCTS.map(p => `${p.name}（${p.category}）… ${p.price.toLocaleString('ja-JP')} 円`),
+    links: [['今月のおすすめ', '/pickup'], ['トップへ戻る', '/']],
+  },
+  '/news': {
+    title: 'お知らせ',
+    text: ['秋の文具フェア: 2030-09-01〜09-30 は、文具の商品がすべて10%引きです。', '雨の日トートは、9月下旬に再入荷の予定です。'],
+    links: [['商品一覧', '/products'], ['トップへ戻る', '/']],
+  },
+};
+const CALC_KEYS = ['C', '(', ')', '/', '7', '8', '9', '*', '4', '5', '6', '-', '1', '2', '3', '+', '0', '.', '⌫', '='];
+const KEY_LABEL = { '/': '÷', '*': '×', '-': '−' };
+const prettyExpr = s => s.replace(/[/*-]/g, c => KEY_LABEL[c]);
+
+const desk = (() => {
+  const box = { open_page: $('#boxBrowser'), calculator: $('#boxCalc'), draw_pixels: $('#boxPixel') };
+  let gen = 0;   // 「最初から」で増やす。動いている途中の道具はこれを見て止まる
+  const wait = async (ms, g) => {
+    if (!diagram.reduce.matches) await sleep(ms);
+    if (g !== gen) throw new Error('作業台がリセットされました');
+  };
+  const mark = name => Object.entries(box).forEach(([k, b]) => b.classList.toggle('active', k === name));
+
+  /* ブラウザ */
+  const brUrl = $('#brUrl'), brPage = $('#brPage');
+  function loadPage(u) {
+    let s = str(u).trim();
+    if (!s) throw new Error('url を指定してください');
+    if (!/^[a-z]+:\/\//i.test(s)) s = s.startsWith('shop.example') ? 'https://' + s : `${SITE}/${s.replace(/^\/+/, '')}`;
+    let url;
+    try { url = new URL(s); } catch { throw new Error(`「${str(u)}」は URL として読めません`); }
+    if (url.hostname !== 'shop.example') throw new Error(`このブラウザで開けるのは店のサイト（${SITE}/）だけです`);
+    const path = url.pathname.replace(/\/+$/, '') || '/';
+    const page = PAGES[path];
+    if (!page) throw new Error(`ページが見つかりません（404）: ${SITE}${path}`);
+    return {
+      url: SITE + (path === '/' ? '/' : path), title: page.title, text: page.text.join('\n'),
+      links: page.links.map(([text, p]) => ({ text, url: SITE + (p === '/' ? '/' : p) })),
+    };
+  }
+  function renderPage(page) {
+    brUrl.value = page ? page.url : '';
+    brPage.replaceChildren(...(page
+      ? [h('h3', { text: page.title }), ...page.text.split('\n').map(t => h('p', { text: t })),
+        h('div', { class: 'links' }, page.links.map(l => h('button', { type: 'button', text: l.text, onclick: () => openPage(l.url, gen).catch(() => {}) })))]
+      : [h('p', { class: 'blank', text: 'まだ何も開いていません。' })]));
+    brPage.scrollTop = 0;
+  }
+  async function openPage(u, g) {
+    mark('open_page');
+    brUrl.value = str(u);
+    brPage.replaceChildren(h('p', { class: 'blank', text: '読み込み中…' }));
+    await wait(450, g);
+    try { const page = loadPage(u); renderPage(page); return page; } catch (e) {
+      brPage.replaceChildren(h('p', { class: 'blank', text: e.message }));
+      throw e;
+    }
+  }
+  $('#brForm').addEventListener('submit', e => { e.preventDefault(); openPage(brUrl.value, gen).catch(() => {}); });
+
+  /* 電卓 */
+  const calcExpr = $('#calcExpr'), calcVal = $('#calcVal'), keysEl = $('#calcKeys');
+  let expr = '', shown = '0', done = false;
+  const showCalc = () => {
+    calcExpr.textContent = done ? `${prettyExpr(expr)} =` : '';
+    calcVal.textContent = done ? shown : (prettyExpr(expr) || '0');
+  };
+  function press(k) {
+    if (k === 'C') { expr = ''; shown = '0'; done = false; }
+    else if (k === '⌫') { if (done) { expr = ''; done = false; } expr = expr.slice(0, -1); }
+    else if (k === '=') {
+      if (!expr) return;
+      try { shown = String(calc(expr)); } catch { shown = 'エラー'; }
+      done = true;
+    } else {
+      if (done) { expr = /[+\-*/]/.test(k) && shown !== 'エラー' ? shown : ''; done = false; }
+      expr += k;
+    }
+    showCalc();
+  }
+  const keyBtns = {};
+  for (const k of CALC_KEYS) {
+    keyBtns[k] = h('button', { type: 'button', class: /[0-9.]/.test(k) ? null : 'op', 'aria-label': k === '⌫' ? '1文字消す' : null, text: KEY_LABEL[k] || k, onclick: () => press(k) });
+    keysEl.append(keyBtns[k]);
+  }
+  async function calculate(expression, g) {
+    mark('calculator');
+    const keys = str(expression).replace(/×/g, '*').replace(/÷/g, '/').replace(/[−–ー]/g, '-').replace(/[,，\s円]/g, '').split('');
+    if (!keys.length) throw new Error('式を指定してください');
+    const bad = keys.find(k => !/[0-9.+\-*/()]/.test(k));
+    if (bad) throw new Error(`電卓に「${bad}」のキーはありません。数字と + - * / ( ) . だけの式にしてください`);
+    press('C');
+    for (const k of [...keys, '=']) {
+      await wait(110, g);
+      keyBtns[k].classList.add('on'); setTimeout(() => keyBtns[k].classList.remove('on'), 90);
+      press(k);
+    }
+    return { expression: keys.join(''), result: calc(keys.join('')) };   // 式がおかしければここで理由つきのエラーになる
+  }
+
+  /* ドット絵キャンバス */
+  const cv = $('#pixCanvas'), g2 = cv.getContext('2d'), cell = cv.width / PIX;
+  const px = Array(PIX * PIX).fill('.');
+  let color = 'k';
+  function paint() {
+    g2.fillStyle = '#F3F5F8'; g2.fillRect(0, 0, cv.width, cv.height);
+    px.forEach((c, i) => { if (c !== '.') { g2.fillStyle = PAL[c][1]; g2.fillRect((i % PIX) * cell, Math.floor(i / PIX) * cell, cell, cell); } });
+    g2.strokeStyle = 'rgba(24,33,43,.10)'; g2.lineWidth = 1;
+    g2.beginPath();
+    for (let i = 1; i < PIX; i++) { const v = i * cell + .5; g2.moveTo(v, 0); g2.lineTo(v, cv.height); g2.moveTo(0, v); g2.lineTo(cv.width, v); }
+    g2.stroke();
+  }
+  function parseArt(art) {
+    const s = (Array.isArray(art) ? art.join('/') : str(art)).replace(/\\n/g, '\n').trim();
+    if (!s) throw new Error('art が空です');
+    const rows = s.split(/[\/\n]/).map(r => r.replace(/\s+$/, '').replace(/ /g, '.').toLowerCase());
+    while (rows.length && !rows[rows.length - 1]) rows.pop();
+    if (rows.length > PIX) throw new Error(`${PIX}行までにしてください（${rows.length}行あります）`);
+    rows.forEach((r, i) => {
+      if (r.length > PIX) throw new Error(`${i + 1}行目が${PIX}文字を超えています（${r.length}文字）`);
+      const bad = [...r].find(c => !PAL[c]);
+      if (bad) throw new Error(`${i + 1}行目の「${bad}」は使えない文字です。使えるのは ${Object.keys(PAL).join(' ')} だけです`);
+    });
+    if (!rows.join('').replace(/\./g, '')) throw new Error('色のついたドットが1つもありません');
+    return rows;
+  }
+  async function draw(art, g) {
+    mark('draw_pixels');
+    const rows = parseArt(art);
+    px.fill('.'); paint();
+    for (let y = 0; y < rows.length; y++) {
+      await wait(45, g);
+      [...rows[y]].forEach((c, x) => { px[y * PIX + x] = c; });
+      paint();
+    }
+    const used = [...new Set(px.filter(c => c !== '.'))];
+    return { size: `${PIX}x${PIX}`, rows: rows.length, filled_pixels: px.filter(c => c !== '.').length, colors: used.map(c => PAL[c][0]) };
+  }
+  const at = e => {
+    const r = cv.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / r.width * PIX), y = Math.floor((e.clientY - r.top) / r.height * PIX);
+    return x >= 0 && x < PIX && y >= 0 && y < PIX ? y * PIX + x : -1;
+  };
+  const dab = e => { const i = at(e); if (i >= 0 && px[i] !== color) { px[i] = color; paint(); } };
+  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); dab(e); });
+  cv.addEventListener('pointermove', e => { if (e.buttons) dab(e); });
+  const palEl = $('#palette'), swatches = [];
+  for (const [c, [name, hex]] of Object.entries(PAL)) {
+    const b = h('button', { type: 'button', class: hex ? null : 'erase', title: hex ? name : '消しゴム', 'aria-label': hex ? name : '消しゴム', 'aria-pressed': String(c === color), style: hex ? `--sw:${hex}` : null,
+      onclick: () => { color = c; swatches.forEach(s => s.setAttribute('aria-pressed', String(s === b))); } });
+    swatches.push(b); palEl.append(b);
+  }
+
+  function reset() { gen++; mark(null); renderPage(null); press('C'); px.fill('.'); paint(); }
+  return {
+    reset,
+    openPage: u => openPage(u, gen),
+    calculate: e => calculate(e, gen),
+    draw: a => draw(a, gen),
+  };
+})();
+
 /* ---------- 記録（カード） ---------- */
 const logEl = $('#log'), logHint = $('#logHint');
 const slider = window.matchMedia('(max-width: 959px)');   // 狭い画面ではカードを横に並べる
@@ -838,7 +1197,7 @@ function liveBox(body, brain) {
 
 /* ---------- エージェント本体: 図 6-9 の流れをそのまま書いたもの ---------- */
 function validatePlan(steps) {
-  const unknown = steps.filter(s => !TOOLS[s]);
+  const unknown = steps.filter(s => !KIT.tools[s]);
   const checks = [
     { ok: steps.length > 0, text: '計画が空でない' },
     { ok: unknown.length === 0, text: unknown.length ? `一覧にない道具がある: ${[...new Set(unknown)].join(', ')}` : '一覧にある道具だけを使っている' },
@@ -849,14 +1208,14 @@ function validatePlan(steps) {
   if (!ok) {
     const why = [];
     if (!steps.length) why.push('計画を読み取れませんでした（道具の名前が1つもありません）。');
-    if (unknown.length) why.push(`${[...new Set(unknown)].join(', ')} は道具の一覧にありません。使えるのは ${Object.keys(TOOLS).join(', ')} だけです。`);
+    if (unknown.length) why.push(`${[...new Set(unknown)].join(', ')} は道具の一覧にありません。使えるのは ${Object.keys(KIT.tools).join(', ')} だけです。`);
     if (steps.length > MAX_STEPS) why.push(`ステップが多すぎます（${MAX_STEPS}以内にしてください）。`);
     feedback = why.join(' ');
   }
   return { ok, checks, unknown, feedback };
 }
 function checkArgs(name, args) {
-  const want = Object.keys(TOOLS[name].params);
+  const want = Object.keys(KIT.tools[name].params);
   const missing = want.filter(k => args[k] === undefined || args[k] === null || args[k] === '');
   const extra = Object.keys(args).filter(k => !want.includes(k));
   if (missing.length) return `引数が足りません: ${missing.join(', ')}`;
@@ -916,12 +1275,13 @@ async function* toolUseRun(run) {
 
   diagram.show({ role: 'tools', nodes: ['tools', 'outputs'], edges: ['t_o'] });
   const { tool, args } = ctx.call;
-  if (!TOOLS[tool]) ctx.output = { error: `「${tool || '（空）'}」という道具は一覧にありません` };
+  if (!KIT.tools[tool]) ctx.output = { error: `「${tool || '（空）'}」という道具は一覧にありません` };
   else {
     const bad = checkArgs(tool, args);
     if (bad) ctx.output = { error: bad };
-    else { try { ctx.output = TOOLS[tool].run(args); } catch (e) { ctx.output = { error: e.message }; } }
+    else { try { ctx.output = await KIT.tools[tool].run(args); } catch (e) { ctx.output = { error: e.message }; } }
   }
+  if (!alive()) return;
   put(addCard(run, { role: 'tools', who: 'Tools', title: '道具が実行される', badge: 'コードで実行', lead: 'プログラムが呼び出しの文を読み取り、実際の関数を動かします。ここはモデルの外で起きます。' }),
     kv(ctx.output.error ? '出力（エラー）' : '出力', pre(fmtOut(ctx.output))));
   yield;
@@ -953,7 +1313,7 @@ async function* agentRun(run) {
   yield;
 
   diagram.show({ role: 'tools', nodes: ['tools', 'planner'], edges: ['t_p'] });
-  addCard(run, { role: 'tools', who: 'Tools', title: '使える道具の一覧が渡される', lead: 'Planner が計画に使えるのは、この一覧にある道具だけです。一覧の中身が、エージェントにできることの範囲を決めます。' })
+  addCard(run, { role: 'tools', who: 'Tools', title: '使える道具の一覧が渡される', lead: KIT.toolsLead })
     .append(toolList());
   yield;
 
@@ -1001,15 +1361,15 @@ async function* agentRun(run) {
       /* 3. 計画を実行する */
       let failed = null;
       for (let i = 0; i < ctx.plan.length; i++) {
-        const name = ctx.plan[i], tool = TOOLS[name];
+        const name = ctx.plan[i], tool = KIT.tools[name];
         const needsArgs = Object.keys(tool.params).length > 0;
         diagram.show({ role: 'executor', nodes: ['executor', 'tools'], edges: ['x_t'] }, false);
         body = addCard(run, {
           role: 'executor', who: 'Executor', badge: needsArgs ? brain.badge : 'コードで実行',
           title: `道具を呼ぶ（${i + 1}/${ctx.plan.length}）`,
-          lead: needsArgs
+          lead: (needsArgs
             ? (i === 0 ? 'ここで初めて引数を決めて、道具を呼び出します。' : 'これまでの出力を見て引数を決め、次の道具を呼び出します。')
-            : 'この道具には引数がないので、そのまま呼び出します。',
+            : 'この道具には引数がないので、そのまま呼び出します。') + KIT.runNote,
         });
         let args = {}, aPrompt = null;
         if (needsArgs) {
@@ -1028,7 +1388,8 @@ async function* agentRun(run) {
           body.parentElement._hl = diagram.current;
         } else {
           run.stats.tool++;
-          try { output = tool.run(args); } catch (e) { output = { error: e.message }; }
+          try { output = await tool.run(args); } catch (e) { output = { error: e.message }; }
+          if (!alive()) return;
           diagram.show({ role: 'executor', nodes: ['executor', 'tools', 'outputs'], edges: ['x_t', 't_o'] });
           body.parentElement._hl = diagram.current;
         }
@@ -1057,9 +1418,11 @@ async function* agentRun(run) {
           body.append(h('p', { class: 'verdict ok', text: '答えられます。' }), kv('答えの案', h('p', { text: j.answer })), promptDetails(jPrompt));
           yield;
           diagram.show({ role: 'finish', nodes: ['evaluator', 'finish'], edges: ['e_f'] });
-          addCard(run, { role: 'finish', who: 'Finish', title: '答えを返す' }).append(
+          put(addCard(run, { role: 'finish', who: 'Finish', title: '答えを返す' }),
             h('p', { class: 'answer', text: j.answer }),
-            h('p', { class: 'stats', text: statsText(run) }));
+            h('p', { class: 'stats', text: statsText(run) }),
+            state.stage === 3 && h('p', { class: 'lead', text: '道具は、関数のほかに画面の部品でもかまいません。次の段階では、ページの中のブラウザ・電卓・ドット絵キャンバスを道具としてつなぎます。' }),
+            state.stage === 3 && nextStageBtn(4, '段階 4「画面の道具をつなぐ」へ進む'));
           return;
         }
         feedback = j.feedback;
@@ -1084,11 +1447,13 @@ async function* agentRun(run) {
 const statsText = run => `計画 ${run.ctx.attempt}回、道具の呼び出し ${run.stats.tool}回、モデルの呼び出し ${run.stats.model}回${run.brain.kind === 'script' ? '（台本では代役）' : ''}`;
 
 /* ---------- 画面の状態と操作 ---------- */
-const state = { stage: 1, mode: 'script', scene: SCENES[0], run: null, auto: false };
+const state = { stage: 1, mode: 'script', sceneIdx: { 3: 0, 4: 0 }, run: null, auto: false };
+const curScene = () => SCENES_BY_STAGE[state.stage]?.[state.sceneIdx[state.stage]] || SCENES[0];
 const STAGE_DESC = {
   1: '質問を受け取り、学習した知識だけで答えの文を作ります。',
   2: '道具の一覧を渡されたモデルは、道具を呼び、その出力を読んでから答えを作ります。',
   3: '道具を何度も使う質問では、計画を立て、点検し、実行し、結果を確かめます。',
+  4: 'エージェントの形は段階 3 と同じまま、道具を作業台のブラウザ・電卓・ドット絵キャンバスに入れ替えます。道具を呼ぶと、作業台が実際に動きます。',
 };
 const el = {
   next: $('#nextBtn'), auto: $('#autoBtn'), reset: $('#resetBtn'),
@@ -1098,23 +1463,25 @@ const el = {
   modelSel: $('#modelSel'), loadBtn: $('#loadBtn'), loadBar: $('#loadBar'), status: $('#modelStatus'),
   query: $('#queryInput'), chips: $('#chips'),
   stageBtns: [...document.querySelectorAll('.stages button')],
+  desk: $('#desk'),
 };
 const modelReady = () => llm.engine && llm.modelId === el.modelSel.value;
-const currentQuery = () => (state.mode !== 'script' ? el.query.value.trim() : state.stage === 3 ? state.scene.query : Q_SIMPLE);
+const currentQuery = () => (state.mode !== 'script' ? el.query.value.trim() : state.stage >= 3 ? curScene().query : Q_SIMPLE);
 
 function newRun() {
   const run = {
-    brain: state.mode === 'script' ? scriptedBrain(state.scene) : modelBrain(),
+    brain: state.mode === 'script' ? scriptedBrain(curScene()) : modelBrain(),
     ctx: { query: currentQuery(), attempt: 1, plan: [], outputs: [], history: [] },
     stats: { tool: 0, model: 0 }, stepNo: 0, busy: false, finished: false, gen: null,
   };
-  run.gen = [answerOnlyRun, toolUseRun, agentRun][state.stage - 1](run);
+  run.gen = [answerOnlyRun, toolUseRun, agentRun, agentRun][state.stage - 1](run);
   return run;
 }
 function reset() {
   state.auto = false;
   if (state.run?.busy && llm.engine) { try { llm.engine.interruptGenerate(); } catch {} }
   state.run = null;
+  desk.reset();
   diagram.clear();
   showEmpty(state.mode === 'model' && !modelReady()
     ? 'モデルを読み込むと動かせます。読み込みを待つあいだは「台本で動かす」で流れを見られます。'
@@ -1169,7 +1536,8 @@ function syncSetup() {
   el.modeScript.setAttribute('aria-pressed', String(mode === 'script'));
   el.modeModel.setAttribute('aria-pressed', String(mode === 'model'));
   el.scriptBox.hidden = mode !== 'script';
-  el.sceneField.hidden = !(mode === 'script' && stage === 3);
+  el.sceneField.hidden = !(mode === 'script' && stage >= 3);
+  el.desk.hidden = stage !== 4;
   el.modelBox.hidden = el.modelField.hidden = el.loadBtn.hidden = mode !== 'model';
   el.sceneQuery.textContent = currentQuery();
 }
@@ -1179,9 +1547,18 @@ function setMode(mode) {
   if (mode === 'model') describeModelState();
   reset();
 }
+const CHIPS = {
+  shop: [Q_SIMPLE, Q_MAIN, '先週の売上トップ2の価格を合計するといくら？'],
+  desk: [Q_DESK, 'お知らせを見て、星空ノートを5冊フェアの値段で買うといくらか計算して', '赤いハートをドット絵で描いて'],
+};
 function setStage(n) {
   state.stage = n;
-  el.query.value = n === 3 ? Q_MAIN : Q_SIMPLE;
+  KIT = n === 4 ? KITS.desk : KITS.shop;
+  el.query.value = n === 4 ? Q_DESK : n === 3 ? Q_MAIN : Q_SIMPLE;
+  el.chips.replaceChildren(...CHIPS[n === 4 ? 'desk' : 'shop'].map(q =>
+    h('button', { type: 'button', text: q, onclick: () => { el.query.value = q; reset(); } })));
+  el.sceneSel.replaceChildren(...(SCENES_BY_STAGE[n] || []).map((s, i) => h('option', { value: i, text: `${i + 1}. ${s.label}` })));
+  el.sceneSel.value = state.sceneIdx[n] ?? 0;
   syncSetup();
   reset();
 }
@@ -1221,18 +1598,14 @@ async function loadModel() {
 }
 
 /* ---------- 初期化 ---------- */
-SCENES.forEach((s, i) => el.sceneSel.append(h('option', { value: i, text: `${i + 1}. ${s.label}` })));
 MODELS.forEach(m => el.modelSel.append(h('option', { value: m.id, text: m.label })));
-el.query.value = Q_SIMPLE;
-[Q_SIMPLE, Q_MAIN, '先週の売上トップ2の価格を合計するといくら？'].forEach(q =>
-  el.chips.append(h('button', { type: 'button', text: q, onclick: () => { el.query.value = q; reset(); } })));
 
 el.next.addEventListener('click', nextStep);
 el.auto.addEventListener('click', () => { state.auto = !state.auto; syncControls(); if (state.auto) autoLoop(); });
 el.reset.addEventListener('click', reset);
 el.modeScript.addEventListener('click', () => setMode('script'));
 el.modeModel.addEventListener('click', () => setMode('model'));
-el.sceneSel.addEventListener('change', () => { state.scene = SCENES[+el.sceneSel.value]; syncSetup(); reset(); });
+el.sceneSel.addEventListener('change', () => { state.sceneIdx[state.stage] = +el.sceneSel.value; syncSetup(); reset(); });
 el.stageBtns.forEach(b => b.addEventListener('click', () => setStage(+b.dataset.stage)));
 el.modelSel.addEventListener('change', () => { describeModelState(); reset(); });
 el.loadBtn.addEventListener('click', loadModel);
@@ -1245,11 +1618,10 @@ document.addEventListener('keydown', e => {
 
 diagram.render(diagram.host.clientWidth < 560 ? 'tall' : 'wide');
 new ResizeObserver(() => diagram.fit()).observe(diagram.host);
-syncSetup();
-reset();
+setStage(1);
 
 // テスト用の窓口（動作には不要）
-window.__demo = { TOOLS, SCENES, state, nextStep, setStage, validatePlan, parseLoose, normStep, calc };
+window.__demo = { get TOOLS() { return KIT.tools; }, KITS, SCENES, DESK_SCENES, state, nextStep, setStage, validatePlan, parseLoose, normStep, calc, desk };
 })();
 </script>
 </body>
