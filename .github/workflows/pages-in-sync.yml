@@ -1,0 +1,21 @@
+# en/index.html と ko/index.html は index.html から tools/build.mjs で作る。作り直し忘れを止める。
+name: pages-in-sync
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/build.mjs
+      - name: 生成したページが最新か確かめる
+        run: |
+          if ! git diff --exit-code -- index.html en ko; then
+            echo "::error::index.html を直したあとに node tools/build.mjs を実行して、en/ と ko/ を作り直してください"
+            exit 1
+          fi

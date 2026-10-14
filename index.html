@@ -1,10 +1,30 @@
 <!doctype html>
-<html lang="ja">
+<html lang="ja" data-page-lang="ja" data-root="./">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="author" content="yandod">
+<!-- meta:start（tools/build.mjs が書き出す。直すときは tools/site.mjs を直して実行する） -->
 <title>エージェントが質問に答えるまで</title>
+<meta name="description" content="答えるだけのAIから、道具を使うAI、そしてエージェントへ。計画・点検・実行・確認の流れを、4つの段階で一歩ずつ動かして見るデモです。">
+<link rel="canonical" href="https://yandod.github.io/learn-agentic/">
+<link rel="alternate" hreflang="ja" href="https://yandod.github.io/learn-agentic/">
+<link rel="alternate" hreflang="en" href="https://yandod.github.io/learn-agentic/en/">
+<link rel="alternate" hreflang="ko" href="https://yandod.github.io/learn-agentic/ko/">
+<link rel="alternate" hreflang="x-default" href="https://yandod.github.io/learn-agentic/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://yandod.github.io/learn-agentic/">
+<meta property="og:title" content="エージェントが質問に答えるまで">
+<meta property="og:description" content="答えるだけのAIから、道具を使うAI、そしてエージェントへ。計画・点検・実行・確認の流れを、4つの段階で一歩ずつ動かして見るデモです。">
+<meta property="og:image" content="https://yandod.github.io/learn-agentic/og/ja.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="「エージェントが質問に答えるまで」。Planner、Executor、Tools、Evaluator、Finish が矢印でつながった図と、4つの段階。">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<!-- meta:end -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+1+Code:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
@@ -2379,12 +2399,25 @@ async function loadModel() {
 
 /* ---------- 言語の切り替え ---------- */
 const LANG_KEY = 'learn-agentic-lang';
+// 言語ごとにページを分けてある（/ が日本語、/en/ と /ko/）。SNS のサムネイルや題名はページごとに違う
+const PAGE_LANG = document.documentElement.dataset.pageLang || 'ja';
+const ROOT = document.documentElement.dataset.root || './';
 function pickLang() {
   const ok = l => (l && Object.hasOwn(I18N, l) ? l : null);
   let saved = null;
   try { saved = localStorage.getItem(LANG_KEY); } catch {}
   const nav = (navigator.languages || [navigator.language || '']).map(l => str(l).slice(0, 2).toLowerCase()).find(l => I18N[l]);
-  return ok(new URLSearchParams(location.search).get('lang')) || ok(saved) || nav || 'ja';
+  // /en/ と /ko/ はその言語で開く。/ だけは前に選んだ言語やブラウザの設定に合わせる
+  return ok(new URLSearchParams(location.search).get('lang')) || (PAGE_LANG !== 'ja' ? PAGE_LANG : null) || ok(saved) || nav || 'ja';
+}
+// その言語のページの URL。アドレス欄をこれにしておけば、コピーして共有したときにその言語のサムネイルが出る
+function langUrl(lang) {
+  const u = new URL(location.href);
+  u.searchParams.delete('lang');
+  if (u.protocol === 'file:') { if (lang !== PAGE_LANG) u.searchParams.set('lang', lang); return u; }
+  const to = new URL(ROOT + (lang === 'ja' ? '' : lang + '/'), u);
+  to.search = u.search; to.hash = u.hash;
+  return to;
 }
 function applyStatic() {
   document.documentElement.lang = T.htmlLang;
@@ -2409,14 +2442,8 @@ function setLang(lang, save = true) {
   buildScenes();
   applyStatic();
   desk.relabel();
-  if (save) {
-    try { localStorage.setItem(LANG_KEY, lang); } catch {}
-    try {
-      const u = new URL(location.href);
-      u.searchParams.set('lang', lang);
-      history.replaceState(null, '', u);
-    } catch {}
-  }
+  if (save) { try { localStorage.setItem(LANG_KEY, lang); } catch {} }
+  try { history.replaceState(null, '', langUrl(lang)); } catch {}
   if (state.mode === 'model') describeModelState();
   setStage(state.stage);   // 図・質問・場面を新しい言語で作り直し、最初から
 }
