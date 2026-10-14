@@ -1,0 +1,2482 @@
+<!doctype html>
+<html lang="ko" data-page-lang="ko" data-root="../">
+<head>
+<!-- このファイルは tools/build.mjs が index.html から作ったもの。直すときは index.html を直して node tools/build.mjs を実行する -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="author" content="yandod">
+<!-- meta:start（tools/build.mjs が書き出す。直すときは tools/site.mjs を直して実行する） -->
+<title>에이전트가 질문에 답하기까지</title>
+<meta name="description" content="답하기만 하는 AI에서 도구를 쓰는 AI, 그리고 에이전트로. 계획·점검·실행·확인의 흐름을 네 단계로 한 걸음씩 움직이며 보는 데모입니다.">
+<link rel="canonical" href="https://yandod.github.io/learn-agentic/ko/">
+<link rel="alternate" hreflang="ja" href="https://yandod.github.io/learn-agentic/">
+<link rel="alternate" hreflang="en" href="https://yandod.github.io/learn-agentic/en/">
+<link rel="alternate" hreflang="ko" href="https://yandod.github.io/learn-agentic/ko/">
+<link rel="alternate" hreflang="x-default" href="https://yandod.github.io/learn-agentic/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://yandod.github.io/learn-agentic/ko/">
+<meta property="og:title" content="에이전트가 질문에 답하기까지">
+<meta property="og:description" content="답하기만 하는 AI에서 도구를 쓰는 AI, 그리고 에이전트로. 계획·점검·실행·확인의 흐름을 네 단계로 한 걸음씩 움직이며 보는 데모입니다.">
+<meta property="og:image" content="https://yandod.github.io/learn-agentic/og/ko.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="“에이전트가 질문에 답하기까지”. Planner, Executor, Tools, Evaluator, Finish가 화살표로 연결된 그림과 네 단계.">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:locale:alternate" content="ja_JP">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<!-- meta:end -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+1+Code:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F2F4F7; --surface:#FFFFFF; --ink:#18212B; --muted:#5B6875;
+  --rule:#D5DBE2; --line:#9BA6B2;
+  --planner:#2F54D9; --evaluator:#A8690A; --executor:#0B7A6E; --tools:#9B2C9B;
+  --finish:#1F8A3B; --error:#C42B2B;
+  --sans:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic UI","Noto Sans JP",system-ui,sans-serif;
+  --mono:"M PLUS 1 Code",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+:root:lang(ko){--sans:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+:root:lang(ko) body{word-break:keep-all}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#12161C; --surface:#1A2029; --ink:#E6EBF1; --muted:#9AA6B3;
+    --rule:#2C3541; --line:#5A6675;
+    --planner:#8FA6FF; --evaluator:#E5B458; --executor:#4FD1C1; --tools:#E08AE0;
+    --finish:#6FD08A; --error:#FF8A8A;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#12161C; --surface:#1A2029; --ink:#E6EBF1; --muted:#9AA6B3;
+  --rule:#2C3541; --line:#5A6675;
+  --planner:#8FA6FF; --evaluator:#E5B458; --executor:#4FD1C1; --tools:#E08AE0;
+  --finish:#6FD08A; --error:#FF8A8A;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 8px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.75;-webkit-text-size-adjust:100%}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--planner);outline-offset:2px}
+
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 104px}
+.mast-top{display:flex;flex-wrap:wrap-reverse;justify-content:space-between;align-items:flex-start;gap:6px 12px}
+.mast-top h1{flex:1 1 16em}
+.mast-top .seg{margin-left:auto}
+.seg.small button{min-height:34px;padding:4px 10px;font-size:13px}
+.masthead h1{font-size:clamp(22px,3.4vw,30px);line-height:1.3;margin:0 0 6px;font-weight:700;font-feature-settings:"palt";letter-spacing:.01em}
+.masthead p{margin:0;color:var(--muted);max-width:44em;font-size:14px}
+@media (max-width:560px){.masthead p{font-size:13px;line-height:1.6}.wrap{padding-top:14px}}
+
+/* stages */
+.stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:16px 0 0}
+@media (max-width:560px){.stages{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stages button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;min-height:52px;cursor:pointer;text-align:left;line-height:1.35;font-weight:500;font-size:14px}
+.stages button small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.stages button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:700}
+.stages button[aria-pressed="true"] small{color:inherit;opacity:.75}
+
+/* setup */
+.setup{margin:10px 0 14px;padding:12px 14px;background:var(--surface);border:1px solid var(--rule);border-radius:10px;display:grid;gap:12px}
+.seg{display:inline-grid;grid-auto-flow:column;border:1px solid var(--line);border-radius:8px;overflow:hidden;width:max-content;max-width:100%}
+.seg button{border:0;background:transparent;padding:7px 14px;cursor:pointer;min-height:42px;white-space:nowrap}
+.seg button + button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper);font-weight:500}
+.field{display:grid;gap:4px}
+.field > span{font-size:13px;color:var(--muted)}
+select,input[type="text"]{width:100%;min-height:42px;padding:6px 10px;background:var(--paper);border:1px solid var(--line);border-radius:8px}
+.query-fixed{margin:0;font-weight:500}
+.row{display:flex;gap:10px 12px;flex-wrap:wrap;align-items:end}
+.row .field{flex:1 1 220px;max-width:30em}
+.row .field.fit{flex:0 0 auto}
+.stack{display:grid;gap:10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer;min-height:34px;text-align:left}
+.chips button:hover{border-color:var(--ink)}
+.status{margin:0;font-size:13px;color:var(--muted)}
+.status.err{color:var(--error)}
+.status.ok{color:var(--finish)}
+.bar{height:6px;border-radius:3px;background:var(--rule);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--executor);transition:width .2s}
+[hidden]{display:none !important}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;min-height:44px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover:not(:disabled){border-color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* stage */
+.figure{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:10px}
+.figure svg{display:block;width:100%;height:auto}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:6px 4px 0;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:22px;height:12px;border:1.5px solid var(--line);border-radius:2px}
+.legend i.d{border-style:dashed}
+
+.controls{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:8px;
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));
+  background:color-mix(in srgb,var(--paper) 90%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border-top:1px solid var(--rule)}
+.controls .primary{flex:1 1 auto}
+
+@media (min-width:960px){
+  .wrap{padding-bottom:40px}
+  .stage{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px;align-items:start}
+  .left{position:sticky;top:16px}
+  .controls{position:static;padding:12px 0 0;background:none;border:0;backdrop-filter:none;-webkit-backdrop-filter:none}
+  .controls .primary{flex:0 0 auto;min-width:11em}
+}
+
+/* diagram */
+.edge path{fill:none;stroke:var(--line);stroke-width:1.5;stroke-linejoin:round}
+.edge polygon{fill:var(--line)}
+.edge.active path{stroke:var(--step);stroke-width:2.5}
+.edge.active polygon{fill:var(--step)}
+.node .shape{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.node.data .shape{stroke-dasharray:5 4}
+.node.input .shape{stroke-dasharray:1.5 3.5}
+.node text{fill:var(--ink);text-anchor:middle;font-family:var(--sans)}
+.node .en{font-weight:700}
+.node.data .en,.node.input .en{font-weight:500}
+.node .sub{fill:var(--muted)}
+.node.active .shape{stroke:var(--c);stroke-width:2.5;stroke-dasharray:none;fill:color-mix(in srgb,var(--c) 14%,var(--surface))}
+.node.active .sub{fill:var(--ink)}
+.dot{fill:var(--step);stroke:var(--surface);stroke-width:2}
+.n-query{--c:var(--ink)} .n-planner,.n-plan,.n-model{--c:var(--planner)}
+.n-evaluator{--c:var(--evaluator)} .n-executor{--c:var(--executor)}
+.n-tools,.n-outputs{--c:var(--tools)} .n-finish,.n-answer{--c:var(--finish)}
+
+/* log */
+.logwrap{margin-top:14px;min-height:60vh}
+.log-hint{margin:0 2px 6px;font-size:12px;color:var(--muted)}
+.log{display:flex;gap:10px;align-items:flex-start;overflow-x:auto;scroll-snap-type:x mandatory;
+  margin-inline:-16px;padding:0 16px 10px;scroll-padding-inline:16px;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.log .card{flex:0 0 min(88%,420px);scroll-snap-align:start}
+.log .empty{flex:1 0 100%}
+@media (min-width:960px){
+  .logwrap{margin-top:0;min-height:0}
+  .log-hint{display:none}
+  .log{flex-direction:column-reverse;justify-content:flex-end;align-items:stretch;overflow:visible;scroll-snap-type:none;margin:0;padding:0}
+  .log .card{flex:none}
+  .card:not(.current){opacity:.82}
+}
+.empty{margin:0;padding:18px 16px;border:1px dashed var(--line);border-radius:10px;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--rule);border-left:4px solid var(--c);border-radius:10px;padding:12px 14px}
+.card header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.card .num{font-family:var(--mono);font-size:13px;color:var(--muted);min-width:1.4em}
+.card .who{font-weight:700;color:var(--c)}
+.card h2{font-size:16px;margin:0;font-weight:700;line-height:1.5;overflow-wrap:anywhere}
+.card .badge{font-size:12px;color:var(--muted);border:1px solid var(--rule);border-radius:999px;padding:0 9px;line-height:1.7;margin-left:auto}
+.card .lead{margin:6px 0 0;color:var(--muted);font-size:14px}
+.card .body{display:grid;gap:8px;margin-top:10px}
+.card .body:empty{display:none}
+.kv > b{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.kv p{margin:0}
+pre,code{font-family:var(--mono);font-size:13px}
+pre{margin:0;padding:8px 10px;background:var(--paper);border-radius:6px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+ol.plan{margin:0;padding:0;list-style:none;display:grid;gap:4px;counter-reset:s}
+ol.plan li{counter-increment:s;display:flex;gap:8px;align-items:baseline}
+ol.plan li::before{content:counter(s) ".";font-family:var(--mono);font-size:13px;color:var(--muted);min-width:1.4em}
+ol.plan li.bad code{color:var(--error);text-decoration:line-through}
+ul.checks{margin:0;padding:0;list-style:none;display:grid;gap:2px}
+ul.checks li{display:flex;gap:8px}
+ul.checks li::before{content:"✓";color:var(--finish);font-weight:700}
+ul.checks li.ng::before{content:"✗";color:var(--error)}
+.verdict{margin:0;font-weight:700}
+.verdict.ok{color:var(--finish)} .verdict.ng{color:var(--error)}
+.answer{margin:0;font-size:18px;font-weight:700;line-height:1.6}
+.stats{margin:0;font-size:13px;color:var(--muted)}
+.card .body .lead{margin:4px 0 0}
+.card .body .btn{justify-self:start;white-space:normal;text-align:left}
+details summary{cursor:pointer;font-size:13px;color:var(--muted)}
+details pre{margin-top:6px;font-size:12px}
+ul.tools{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+ul.tools code{display:block;overflow-wrap:anywhere}
+ul.tools span{font-size:13px;color:var(--muted)}
+
+/* workbench (stage 4) */
+.desk{margin-top:10px;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:10px}
+.desk-head{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;margin:0 2px 8px;font-size:12px;color:var(--muted)}
+.desk-head b{font-size:14px;color:var(--ink)}
+.desk-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);gap:8px}
+@media (max-width:560px){.desk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.desk .browser{grid-column:1/-1}}
+.tool-box{border:1px solid var(--rule);border-radius:8px;padding:8px;display:grid;gap:6px;align-content:start;min-width:0;transition:border-color .2s,box-shadow .2s}
+.tool-box.active{border-color:var(--tools);box-shadow:0 0 0 2px color-mix(in srgb,var(--tools) 28%,transparent)}
+.tool-title{margin:0;font-size:13px;font-weight:700;line-height:1.4}
+.tool-title code{font-weight:400;font-size:11px;color:var(--muted);margin-left:4px}
+.desk input[type="text"]{min-height:30px;padding:2px 10px;border-radius:999px;font-family:var(--mono);font-size:12px}
+.page{height:176px;overflow:auto;background:var(--paper);border-radius:6px;padding:8px 10px;font-size:13px;line-height:1.6}
+.page h3{margin:0 0 4px;font-size:14px}
+.page p{margin:0 0 4px}
+.page .blank{color:var(--muted)}
+.page .links{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:6px}
+.page .links button{border:0;background:none;padding:2px 0;color:var(--planner);text-decoration:underline;cursor:pointer;font-size:13px}
+.calc-disp{background:var(--paper);border-radius:6px;padding:4px 8px;text-align:right;font-family:var(--mono);display:grid;min-height:54px}
+.calc-disp small{font-size:11px;color:var(--muted);min-height:1.5em;overflow-wrap:anywhere}
+.calc-disp output{font-size:19px;line-height:1.3;overflow-wrap:anywhere}
+.keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.keys button{min-height:32px;padding:0;border:1px solid var(--line);background:var(--surface);border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:14px}
+.keys button.op{background:var(--paper)}
+.keys button.on{background:var(--tools);border-color:var(--tools);color:var(--surface)}
+#pixCanvas{display:block;width:100%;height:auto;aspect-ratio:1;image-rendering:pixelated;border-radius:4px;touch-action:none;cursor:crosshair}
+.palette{display:flex;flex-wrap:wrap;gap:4px}
+.palette button{width:22px;height:22px;padding:0;border:1px solid var(--line);border-radius:4px;background:var(--sw);cursor:pointer}
+.palette button.erase{background:repeating-conic-gradient(#C9CFD6 0 25%,#FFFFFF 0 50%) 50%/8px 8px}
+.palette button[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:1px}
+
+footer{margin-top:28px;font-size:13px;color:var(--muted)}
+footer a{color:inherit}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="mast-top">
+      <h1 data-i18n="title">エージェントが質問に答えるまで</h1>
+      <div class="seg small" role="group" data-i18n-aria="langAria" aria-label="言語">
+        <button type="button" data-lang="ja" lang="ja" aria-pressed="true">日本語</button>
+        <button type="button" data-lang="en" lang="en" aria-pressed="false">English</button>
+        <button type="button" data-lang="ko" lang="ko" aria-pressed="false">한국어</button>
+      </div>
+    </div>
+    <p data-i18n="intro">答えの文を作るだけのAIから、道具を使うAI、そしてエージェントへ。最後はページの中のブラウザ・電卓・ドット絵キャンバスを道具としてつなぎます。4つの段階を順に、一歩ずつ進めて見るデモです。</p>
+  </header>
+
+  <nav class="stages" data-i18n-aria="stagesAria" aria-label="段階">
+    <button type="button" data-stage="1" aria-pressed="true"><small>段階 1</small>答えるだけのAI</button>
+    <button type="button" data-stage="2" aria-pressed="false"><small>段階 2</small>道具を使うAI</button>
+    <button type="button" data-stage="3" aria-pressed="false"><small>段階 3</small>エージェント</button>
+    <button type="button" data-stage="4" aria-pressed="false"><small>段階 4</small>画面の道具をつなぐ</button>
+  </nav>
+
+  <section class="setup" data-i18n-aria="setupAria" aria-label="設定">
+    <div class="row">
+      <div class="field fit">
+        <span id="modeLabel" data-i18n="modeLabel">動かし方</span>
+        <div class="seg" role="group" aria-labelledby="modeLabel">
+          <button type="button" id="modeScript" aria-pressed="true" data-i18n="modeScript">台本</button>
+          <button type="button" id="modeModel" aria-pressed="false" data-i18n="modeModel">ブラウザ内モデル</button>
+        </div>
+      </div>
+      <label class="field" id="sceneField" hidden><span data-i18n="scene">場面</span><select id="sceneSel"></select></label>
+      <label class="field" id="modelField" hidden><span data-i18n="model">モデル</span><select id="modelSel"></select></label>
+      <button type="button" class="btn" id="loadBtn" hidden data-i18n="loadBtn">モデルを読み込む</button>
+    </div>
+
+    <p class="query-fixed" id="scriptBox"><span data-i18n="queryPrefix">質問: </span><span id="sceneQuery"></span></p>
+
+    <div id="modelBox" class="stack" hidden>
+      <div class="bar" id="loadBar" hidden><i></i></div>
+      <p class="status" id="modelStatus" role="status"></p>
+      <label class="field"><span data-i18n="query">質問</span><input type="text" id="queryInput" autocomplete="off"></label>
+      <div class="chips" id="chips"></div>
+    </div>
+  </section>
+
+  <div class="stage">
+    <div class="left">
+      <div class="figure">
+        <div id="diagram"></div>
+        <div class="legend"><span><i></i><span data-i18n="legendSolid">実線は係（部品）</span></span><span><i class="d"></i><span data-i18n="legendDashed">破線は受け渡されるデータ</span></span></div>
+      </div>
+      <section class="desk" id="desk" data-i18n-aria="deskTitle" aria-label="作業台" hidden>
+        <p class="desk-head"><b data-i18n="deskTitle">作業台</b><span data-i18n="deskNote">エージェントが道具として操作します。手で触ることもできます。</span></p>
+        <div class="desk-grid">
+          <div class="tool-box browser" id="boxBrowser">
+            <p class="tool-title">🌐 <span data-i18n="browser">ブラウザ</span><code>open_page</code></p>
+            <form id="brForm"><input type="text" id="brUrl" aria-label="URL" placeholder="https://shop.example/" autocomplete="off" spellcheck="false"></form>
+            <div class="page" id="brPage" aria-live="polite"></div>
+          </div>
+          <div class="tool-box calc" id="boxCalc">
+            <p class="tool-title">🧮 <span data-i18n="calc">電卓</span><code>calculator</code></p>
+            <div class="calc-disp"><small id="calcExpr"></small><output id="calcVal">0</output></div>
+            <div class="keys" id="calcKeys"></div>
+          </div>
+          <div class="tool-box pixel" id="boxPixel">
+            <p class="tool-title">🎨 <span data-i18n="pixel">ドット絵</span><code>draw_pixels</code></p>
+            <canvas id="pixCanvas" width="320" height="320" role="img" data-i18n-aria="canvasAria" aria-label="16×16 のドット絵キャンバス"></canvas>
+            <div class="palette" id="palette"></div>
+          </div>
+        </div>
+      </section>
+      <div class="controls">
+        <button type="button" class="btn primary" id="nextBtn" data-i18n="next">次のステップ</button>
+        <button type="button" class="btn" id="autoBtn" aria-pressed="false">自動で進める</button>
+        <button type="button" class="btn" id="resetBtn" data-i18n="reset">最初から</button>
+      </div>
+    </div>
+    <div class="logwrap">
+      <p class="log-hint" id="logHint" hidden data-i18n="logHint">横にスライドすると前のステップを見返せます。図もそのステップに切り替わります。</p>
+      <section class="log" id="log" aria-live="polite" data-i18n-aria="logAria" aria-label="ステップの記録"></section>
+    </div>
+  </div>
+
+  <footer>
+    <p id="footerText">図と用語は Chip Huyen <a href="https://huyenchip.com/2025/01/07/agents.html" target="_blank" rel="noopener">“Agents”</a>（2025）の図 6-9 をもとにしています。店も商品も売上も、段階 4 のサイト（shop.example）も架空のデータで、店の「今日」は 2030-09-13 に固定しています。</p>
+  </footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- 小道具 ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  if (attrs) for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'text') el.textContent = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids.flat()) {
+    if (k == null || k === false) continue;
+    el.append(k.nodeType ? k : document.createTextNode(String(k)));
+  }
+  return el;
+}
+const put = (el, ...kids) => { el.append(...kids.flat().filter(k => k != null && k !== false)); return el; };
+const str = v => (typeof v === 'string' ? v : v == null ? '' : String(v));
+
+/* ---------- 言語に関係しない決まり ---------- */
+const TODAY = '2030-09-13';
+const DATA_START = '2030-08-15';
+const SITE = 'https://shop.example';
+const PIX = 16;
+const MAX_STEPS = 6, MAX_ATTEMPTS = 3;
+// 商品の数字だけのデータ。名前とカテゴリは言語ごとの I18N[..].products から付ける
+const PRODUCT_DATA = [
+  { price: 1980, stock: 14, base: 9 }, { price: 380, stock: 120, base: 8 }, { price: 1480, stock: 23, base: 6 },
+  { price: 880, stock: 41, base: 5 }, { price: 1280, stock: 9, base: 4 }, { price: 550, stock: 60, base: 3 },
+  { price: 2480, stock: 7, base: 2 }, { price: 720, stock: 35, base: 4 },
+];
+// ドット絵の色。名前は言語ごとの I18N[..].pal から付ける
+const PAL = {
+  '.': null, k: '#1B1F24', w: '#FFFFFF', a: '#9AA3AD', r: '#E0453A', o: '#F08A24', y: '#F5CF3A',
+  g: '#3FA34D', b: '#2F6FD6', s: '#7CC6F2', p: '#F29BB8', n: '#8A5A35',
+};
+
+/* ---------- 言語ごとの文言とデータ（日本語・英語・韓国語） ---------- */
+// 画面の文言だけでなく、商品名・サイトのページ・台本・モデルに渡す指示文も言語ごとに持つ。
+const FOOTER_LINK = '<a href="https://huyenchip.com/2025/01/07/agents.html" target="_blank" rel="noopener">“Agents”</a>';
+const I18N = {
+  ja: {
+    htmlLang: 'ja', locale: 'ja-JP',
+    yen: n => `${n.toLocaleString('ja-JP')} 円`,
+    priceRe: /([\d,]+)\s*円/,
+    ui: {
+      title: 'エージェントが質問に答えるまで',
+      intro: '答えの文を作るだけのAIから、道具を使うAI、そしてエージェントへ。最後はページの中のブラウザ・電卓・ドット絵キャンバスを道具としてつなぎます。4つの段階を順に、一歩ずつ進めて見るデモです。',
+      langAria: '言語', stagesAria: '段階', setupAria: '設定',
+      stageNo: n => `段階 ${n}`,
+      stageNames: ['答えるだけのAI', '道具を使うAI', 'エージェント', '画面の道具をつなぐ'],
+      modeLabel: '動かし方', modeScript: '台本', modeModel: 'ブラウザ内モデル',
+      scene: '場面', model: 'モデル', loadBtn: 'モデルを読み込む', queryPrefix: '質問: ', query: '質問',
+      legendSolid: '実線は係（部品）', legendDashed: '破線は受け渡されるデータ',
+      deskTitle: '作業台', deskNote: 'エージェントが道具として操作します。手で触ることもできます。',
+      browser: 'ブラウザ', calc: '電卓', pixel: 'ドット絵', canvasAria: '16×16 のドット絵キャンバス',
+      next: '次のステップ', auto: '自動で進める', stop: '止める', reset: '最初から',
+      logHint: '横にスライドすると前のステップを見返せます。図もそのステップに切り替わります。',
+      logAria: 'ステップの記録',
+      footer: `図と用語は Chip Huyen ${FOOTER_LINK}（2025）の図 6-9 をもとにしています。店も商品も売上も、段階 4 のサイト（shop.example）も架空のデータで、店の「今日」は 2030-09-13 に固定しています。`,
+      eraser: '消しゴム', backspace: '1文字消す',
+    },
+    products: [['旅するマグカップ', '食器'], ['猫の付箋', '文具'], ['そらいろ手帳', '文具'], ['ふわふわ靴下', '衣類'],
+      ['夜ふかしブレンド', '食品'], ['木のしおり', '文具'], ['雨の日トート', 'バッグ'], ['星空ノート', '文具']],
+    pal: { '.': '空き', k: '黒', w: '白', a: '灰', r: '赤', o: '橙', y: '黄', g: '緑', b: '青', s: '水色', p: '桃', n: '茶' },
+    err: {
+      calcOnly: '数字と + - * / ( ) だけの式にしてください', paren: 'かっこが閉じていません',
+      cantRead: '式を読み取れません', cantCalc: '計算できません',
+      dateFormat: '日付は YYYY-MM-DD の形で指定してください', startAfterEnd: 'start_date が end_date より後になっています',
+      numRange: n => `num_products は 1〜${n} の整数にしてください`,
+      noData: (a, b, c, d) => `${a}〜${b} の販売データはありません（あるのは ${c}〜${d}）`,
+      noProduct: k => `「${k}」という商品は見つかりません`,
+      deskReset: '作業台がリセットされました', urlRequired: 'url を指定してください',
+      notUrl: u => `「${u}」は URL として読めません`,
+      onlySite: `このブラウザで開けるのは店のサイト（${SITE}/）だけです`,
+      page404: u => `ページが見つかりません（404）: ${u}`,
+      calcError: 'エラー', exprRequired: '式を指定してください',
+      noKey: k => `電卓に「${k}」のキーはありません。数字と + - * / ( ) . だけの式にしてください`,
+      artEmpty: 'art が空です',
+      tooManyRows: n => `${PIX}行までにしてください（${n}行あります）`,
+      rowTooLong: (i, n) => `${i}行目が${PIX}文字を超えています（${n}文字）`,
+      badChar: (i, c, all) => `${i}行目の「${c}」は使えない文字です。使えるのは ${all} だけです`,
+      noDots: '色のついたドットが1つもありません',
+      noTool: t => `「${t}」という道具は一覧にありません`,
+      missingArgs: l => `引数が足りません: ${l}`, extraArgs: l => `この道具にない引数があります: ${l}`,
+    },
+    tools: {
+      get_today_date: '今日の日付を返す',
+      fetch_top_products: '期間内に売れた個数の多い順に商品を返す',
+      start_date: '期間の最初の日（YYYY-MM-DD）', end_date: '期間の最後の日（YYYY-MM-DD）', num_products: '上位いくつ返すか',
+      fetch_product_info: '商品の価格・カテゴリ・在庫を返す', product_name: '商品名（正確に）',
+      calculator: '数式を計算する', expression: '数字と + - * / ( ) だけの式',
+      open_page: `ブラウザで店のサイト（${SITE}/）のページを開き、題名・本文・リンクを返す`, url: '開くページの URL',
+      desk_calculator: '電卓のキーを押して式を計算する', desk_expression: '数字と + - * / ( ) . だけの式',
+      draw_pixels: `ドット絵キャンバス（${PIX}×${PIX}）に絵を描く。前の絵は消える`,
+      art: legend => `絵。1行を${PIX}文字までにして、行を / で区切る（${PIX}行まで）。文字の意味: ${legend}`,
+    },
+    kits: {
+      shop: {
+        planRules: ['「先週」「今月」のように今日を基準にした期間は、今日の日付を調べてから決める。'],
+        planExamples: `質問: 「星空ノートはいくら？」
+{"thought":"商品情報を引けば価格がわかる。","steps":["fetch_product_info"]}
+質問: 「先週いちばん売れた商品は？」
+{"thought":"先週の範囲を決めるために今日の日付が要る。そのあと売上順を調べる。","steps":["get_today_date","fetch_top_products"]}`,
+        argRules: [
+          '値は、質問とこれまでの出力から読み取る。出力にない商品名や日付を作らない。',
+          '「先週」は、今日を含む直近7日間とする。',
+          '同じ道具を2回呼ぶ計画なら、まだ調べていないものを選ぶ。',
+        ],
+        toolsLead: 'Planner が計画に使えるのは、この一覧にある道具だけです。一覧の中身が、エージェントにできることの範囲を決めます。',
+        runNote: '',
+      },
+      desk: {
+        planRules: [
+          '商品名や値段は、サイトで調べてから使う。思い込みで決めない。',
+          `サイトはトップページ（${SITE}/）から開き、リンクをたどる。`,
+        ],
+        planExamples: `質問: 「128×45 はいくつ？」
+{"thought":"電卓で計算すればよい。","steps":["calculator"]}
+質問: 「店のサイトで、いちばん安い商品を調べて」
+{"thought":"トップページを開いてリンクを確かめ、商品一覧のページを開く。","steps":["open_page","open_page"]}`,
+        argRules: [
+          '値は、質問とこれまでの出力から読み取る。出力にない商品名や値段を作らない。',
+          `URL は、最初はトップページ ${SITE}/ 。そのあとは、開いたページの links にある URL から選ぶ。`,
+          '計算式には、出力に書かれた値段の数字をそのまま使う。',
+          'ドット絵は、質問に出てきたものの形を、決められた文字だけで描く。',
+        ],
+        toolsLead: '今回の道具は、図の下の作業台に置いたブラウザ・電卓・ドット絵キャンバスです。呼び出すと、画面の上で実際に動きます。',
+        runNote: '作業台の道具が画面の上で動きます。',
+      },
+    },
+    prompt: {
+      planner: ({ inv, rules, examples, hist, query }) => `あなたはエージェントの「Planner（計画役）」です。質問に答えるための計画を作ってください。計画は、使う道具の名前を呼ぶ順に並べたものです。
+
+使える道具:
+${inv}
+
+決まり:
+- 上の道具だけを使う。
+- 引数は書かない（実行のときに決める）。
+- ${MAX_STEPS}ステップ以内。
+${rules}
+
+例:
+${examples}
+${hist}
+質問: 「${query}」
+JSON だけで答えてください。`,
+      history: items => '\nこれまでの計画と、差し戻された理由:\n' + items.map((x, i) =>
+        `${i + 1}回目の計画: ${JSON.stringify(x.plan)}\n理由: ${x.feedback}`).join('\n') + '\n同じ失敗をしない計画にしてください。\n',
+      none: '（まだありません）', done: '（済み）', now: '（いまここ）',
+      param: (k, isInt, desc) => `- ${k}（${isInt ? '整数' : '文字列'}）: ${desc}`,
+      args: ({ query, planLine, history, sig, desc, params, rules }) => `あなたはエージェントの「Executor（実行役）」です。計画の次の道具を呼ぶための引数を決めてください。
+
+質問: 「${query}」
+
+計画:
+${planLine}
+
+これまでの道具の出力:
+${history}
+
+いま呼ぶ道具: ${sig}
+${desc}
+引数:
+${params}
+
+決まり:
+${rules}
+
+引数を JSON だけで答えてください。`,
+      judge: ({ query, history }) => `あなたはエージェントの「Evaluator（評価役）」です。道具の出力だけを根拠に、質問に答えられるかを判定してください。
+
+質問: 「${query}」
+
+道具の出力:
+${history}
+
+答えられるとき: {"done": true, "answer": "質問への答え（日本語で1〜2文）", "feedback": ""}
+足りないとき: {"done": false, "answer": "", "feedback": "何が足りないか、次の計画への助言"}
+
+JSON だけで答えてください。`,
+      answerOnly: query => `次の質問に、日本語で1〜2文で答えてください。
+
+質問: 「${query}」`,
+      pick: ({ inv, query, example }) => `質問に答えるために、道具を1つ選んで呼び出してください。
+
+使える道具:
+${inv}
+
+質問: 「${query}」
+
+呼び出しを JSON だけで答えてください。
+例: ${example}`,
+      answerWith: ({ query, call, output }) => `道具の出力だけを根拠に、質問に日本語で1〜2文で答えてください。出力から答えがわからないときは、わからないと答えてください。
+
+質問: 「${query}」
+道具の呼び出し: ${call}
+道具の出力: ${output}`,
+    },
+    script: {
+      qMain: '先週いちばん売れた商品の価格は？',
+      qSimple: '「そらいろ手帳」はいくら？',
+      qDesk: 'お店のサイトで今月のおすすめ商品を調べて、3個買うといくらか計算し、その商品をドット絵で描いて',
+      chipShop: ['先週の売上トップ2の価格を合計するといくら？'],
+      chipDesk: ['お知らせを見て、星空ノートを5冊フェアの値段で買うといくらか計算して', '赤いハートをドット絵で描いて'],
+      badge: '台本（モデルの代役）',
+      goodThought: '「先週」の範囲を決めるには今日の日付が要る。売上1位の商品名がわかれば、その価格を引ける。',
+      goodAnswer: (a, b, name, price) => `先週（${a}〜${b}）いちばん売れたのは「${name}」で、価格は ${price}です。`,
+      scenes: {
+        smooth: 'すんなり成功する',
+        badtool: '一覧にない道具を計画に入れてしまう',
+        badtool1: 'ネットで売れ筋を検索すれば早い。そのあと商品情報で価格を見る。',
+        badtool2: 'web_search は使えない。一覧にある fetch_top_products で売上順を調べる。期間を決めるために、先に今日の日付を確かめる。',
+        baddate: '日付を思い込みで決めてしまう',
+        baddate1: '先週の売上1位を調べて、その商品の価格を見ればよい。',
+        baddate2: '今日が何日かを確かめずに期間を決めていた。まず get_today_date で今日を調べ、そこから先週の範囲を決める。',
+      },
+      deskThought: 'おすすめ商品も値段も、まだわからない。トップページを開き、おすすめのページへ進んで値段を読む。その値段で計算してから、絵を描く。',
+      deskAnswer: (name, price, total) => `今月のおすすめは「${name}」（${price}）で、3個だと ${total}です。キャンバスにマグカップを描きました。`,
+      deskScenes: {
+        desk: '3つの道具を順に使う',
+        guess: '値段を調べずに計算してしまう',
+        guess1: 'おすすめはたぶんマグカップで、1,500 円くらいのはず。すぐ計算して絵を描けばよい。',
+        guessFeedback: '1500 円という値段は、どの道具の出力にもありません。おすすめ商品も値段も、サイトで確かめてから計算してください。',
+        guess2: '値段を思い込みで決めていた。まずサイトのトップページを開き、おすすめのページで商品名と値段を読んでから計算する。',
+        badurl: 'ページの URL を当てずっぽうで開く',
+        badurlPath: '/osusume',
+        badurl1: 'おすすめのページは /osusume にあるはず。そこで値段を読んで計算し、絵を描く。',
+        badurl2: 'URL を推測したら、ページがなかった。トップページを開いて、リンクから本当の URL を選ぶ。',
+      },
+      guessAnswer: '「そらいろ手帳」は、一般的な手帳と同じく 1,000 円前後のことが多いです。',
+      answerWith: (name, price) => `「${name}」は ${price}です。`,
+    },
+    pages: (P, yen) => ({
+      '/': {
+        title: 'そらいろ雑貨店',
+        text: ['ようこそ。毎日をすこし楽しくする雑貨を集めた、小さなお店です。', '下のリンクから、おすすめや商品の一覧を見られます。'],
+        links: [['今月のおすすめ', '/pickup'], ['商品一覧', '/products'], ['お知らせ', '/news']],
+      },
+      '/pickup': {
+        title: '今月のおすすめ',
+        text: [`今月のおすすめは「${P[0].name}」です。`, `価格は ${yen(P[0].price)}（税込）。旅先の空を思わせる青いラインが入った、白いマグカップです。`],
+        links: [['商品一覧', '/products'], ['トップへ戻る', '/']],
+      },
+      '/products': {
+        title: '商品一覧',
+        text: P.map(p => `${p.name}（${p.category}）… ${yen(p.price)}`),
+        links: [['今月のおすすめ', '/pickup'], ['トップへ戻る', '/']],
+      },
+      '/news': {
+        title: 'お知らせ',
+        text: ['秋の文具フェア: 2030-09-01〜09-30 は、文具の商品がすべて10%引きです。', '雨の日トートは、9月下旬に再入荷の予定です。'],
+        links: [['商品一覧', '/products'], ['トップへ戻る', '/']],
+      },
+    }),
+    models: ['Qwen3.5 2B（標準、GPUメモリ約2.2GB）', 'Qwen3.5 0.8B（軽い、約1.6GB）', 'Qwen3.5 4B（賢い、約3.9GB）',
+      'Gemma 2 2B JPN（日本語向け、約1.9GB）', 'Qwen2.5 1.5B（約1.6GB）'],
+    nodes: { query: '質問', planner: '計画役', plan: '計画', evaluator: '評価役', executor: '実行役', tools: '道具', outputs: '道具の出力', finish: '完了', model: 'モデル', answer: '答え' },
+    layouts: [
+      '段階1の図。Query から Model、Model から Answer へ矢印がのびている。',
+      '段階2の図。Query から Model へ、Model と Tools のあいだを呼び出しと出力が行き来し、Model から Answer へ矢印がのびている。',
+      '段階3の図。Query、Planner、Generated plan、Evaluator、Executor、Tools、Tool outputs、Finish が矢印でつながっている。',
+      '段階4の図。段階3と同じく、Query、Planner、Generated plan、Evaluator、Executor、Tools、Tool outputs、Finish が矢印でつながっている。Tools は作業台のブラウザ・電卓・ドット絵キャンバス。',
+    ],
+    stageDesc: [
+      '質問を受け取り、学習した知識だけで答えの文を作ります。',
+      '道具の一覧を渡されたモデルは、道具を呼び、その出力を読んでから答えを作ります。',
+      '道具を何度も使う質問では、計画を立て、点検し、実行し、結果を確かめます。',
+      'エージェントの形は段階 3 と同じまま、道具を作業台のブラウザ・電卓・ドット絵キャンバスに入れ替えます。道具を呼ぶと、作業台が実際に動きます。',
+    ],
+    c: {
+      blank: 'まだ何も開いていません。', loading: '読み込み中…',
+      showPrompt: 'モデルに渡す指示文を見る', thinking: 'モデルが考えています…',
+      modelBadge: 'モデルが生成', codeRun: 'コードで実行', codeJudge: 'コードで判定',
+      judgeUnreadable: '評価役の出力を JSON として読み取れませんでした。', judgeNoAnswer: '道具の出力だけでは質問に答えられませんでした。',
+      empty: '（空）', noAnswer: '（答えが出てきませんでした）',
+      answer: '答え', truthCheck: '答え合わせ', toolList: '道具の一覧', call: '呼び出し', output: '出力', outputErr: '出力（エラー）',
+      thought: '考え', plan: '計画', reason: '理由', draft: '答えの案', reasonSent: '添える理由',
+      truth: (name, price) => `店のデータでは「${name}」は ${price}です。`,
+      nextStage: (n, name) => `段階 ${n}「${name}」へ進む`,
+      s1QueryTitle: '質問が届く',
+      s1QueryLead: 'モデルの手元にあるのは、学習で身につけた知識と、いま届いた質問文だけです。店のデータは見られません。',
+      s1ModelTitle: '答えの文を作る',
+      s1ModelLead: '知っていることだけで文を作ります。知らないことを聞かれると、答えられないか、もっともらしい内容を作ってしまいます。',
+      s1Next: '店のデータを調べる手段があれば、当て推量をしなくて済みます。次の段階では、モデルに道具を渡します。',
+      s2QueryTitle: '質問と、道具の一覧が届く',
+      s2QueryLead: '段階 1 との違いは、道具の一覧が一緒に渡されることです。道具は、店のデータを調べたり計算したりする関数です。',
+      s2PickTitle: '道具の呼び出しを書く',
+      s2PickLead: 'モデルは道具を自分では動かせません。「この道具を、この引数で呼んでほしい」という文を書くだけです。',
+      s2RunTitle: '道具が実行される',
+      s2RunLead: 'プログラムが呼び出しの文を読み取り、実際の関数を動かします。ここはモデルの外で起きます。',
+      s2AnswerTitle: '出力を読んで、答えを作る',
+      s2AnswerLead: '道具の出力が、質問と一緒にモデルへ戻されます。モデルはそれを読んで答えの文を作ります。',
+      s2ToolErr: '道具がエラーになったので、答えられません。',
+      s2Next: q => `道具を1回呼べば足りる質問は、これで答えられます。「${q}」のように、道具を何度も、正しい順番で使う質問には、計画と点検が要ります。`,
+      s3QueryLead: 'ここがエージェントの入口です。質問は Planner に渡されます。',
+      s3ToolsTitle: '使える道具の一覧が渡される',
+      planTitle: '計画を作る', replanTitle: n => `計画を作り直す（${n}回目）`,
+      planLead: '道具を呼ぶ順番だけを決めます。まだ何も実行しません。引数は前の道具の結果を見てから決めるので、ここでは書きません。',
+      replanLead: '差し戻された理由を読んで、計画を立て直します。',
+      noPlan: '（読み取れる計画が出てきませんでした）',
+      checkTitle: '計画を点検する', checkLead: '実行の前に、計画を機械的に点検します。通らなかった計画は実行されません。',
+      checkOk: '合格。実行に進めます。', checkNg: '不合格。この計画は実行しません。',
+      vNotEmpty: '計画が空でない', vUnknown: l => `一覧にない道具がある: ${l}`, vKnown: '一覧にある道具だけを使っている',
+      vMax: n => `${MAX_STEPS}ステップ以内（${n}ステップ）`,
+      whyEmpty: '計画を読み取れませんでした（道具の名前が1つもありません）。',
+      whyUnknown: (l, all) => `${l} は道具の一覧にありません。使えるのは ${all} だけです。`,
+      whyMax: `ステップが多すぎます（${MAX_STEPS}以内にしてください）。`,
+      recvTitle: '計画を受け取る', recvLead: '点検を通った計画だけが Executor に渡ります。ここから順に道具を呼びます。',
+      callTitle: (i, n) => `道具を呼ぶ（${i}/${n}）`,
+      callFirst: 'ここで初めて引数を決めて、道具を呼び出します。',
+      callNext: 'これまでの出力を見て引数を決め、次の道具を呼び出します。',
+      callNoArgs: 'この道具には引数がないので、そのまま呼び出します。',
+      stepError: (i, name, msg) => `ステップ${i}の ${name} がエラーになりました: ${msg}`,
+      resultTitle: '結果を確かめる',
+      resultErrLead: '道具の出力にエラーがあるので、モデルに聞くまでもなく不合格にします。',
+      resultLead: '道具の出力で質問に答えられるかを判定します。',
+      notYet: 'まだ答えられません。', canAnswer: '答えられます。',
+      finishTitle: '答えを返す',
+      s3Next: '道具は、関数のほかに画面の部品でもかまいません。次の段階では、ページの中のブラウザ・電卓・ドット絵キャンバスを道具としてつなぎます。',
+      backTitle: 'Planner に差し戻す', backLead: '理由を添えて Planner に戻します。Planner は次の計画でこの理由を読みます。',
+      stopTitle: '打ち切る',
+      stopLead: `計画を${MAX_ATTEMPTS}回作っても答えに届かなかったので、ここで止めます。回数の上限がないと、エージェントは時間と計算を使い続けてしまいます。`,
+      noFinal: '答えを出せませんでした。',
+      stats: (a, t, m, script) => `計画 ${a}回、道具の呼び出し ${t}回、モデルの呼び出し ${m}回${script ? '（台本では代役）' : ''}`,
+      needModel: 'モデルを読み込むと動かせます。読み込みを待つあいだは「台本」で流れを見られます。',
+      pressNext: (desc, planner) => `${desc}「次のステップ」を押すと、質問が${planner ? ' Planner ' : 'モデル'}に届きます。`,
+      errWho: 'エラー', errTitle: 'このステップを実行できませんでした',
+      errLead: 'モデルの呼び出しが失敗しました。「最初から」でやり直すか、別のモデルを読み込んでください。',
+      ready: '読み込み済みです。「次のステップ」で動かせます。',
+      noGpu: 'このブラウザは WebGPU に対応していません。PC の Chrome か Edge で開いてください。',
+      firstLoad: '初回はモデルのダウンロードに数分かかります。2回目からはブラウザに保存されたものを使います。',
+      fetchLib: 'ライブラリを取得しています…',
+      progress: (p, t) => `読み込み中 ${p}%  ${t}`,
+      loadFail: msg => `モデルを読み込めませんでした。チャット内のプレビューなど、外部からのダウンロードが止められている場所では動きません。このHTMLを自分のサーバーに置いて、PC の Chrome か Edge で開いてください。（${msg}）`,
+    },
+  },
+
+  en: {
+    htmlLang: 'en', locale: 'en-US',
+    yen: n => `¥${n.toLocaleString('en-US')}`,
+    priceRe: /¥\s*([\d,]+)/,
+    ui: {
+      title: 'How an Agent Answers a Question',
+      intro: 'From an AI that only writes an answer, to an AI that uses tools, and then to an agent. At the end, the browser, calculator, and pixel-art canvas inside this page are connected as tools. This demo walks through the four stages, one step at a time.',
+      langAria: 'Language', stagesAria: 'Stages', setupAria: 'Settings',
+      stageNo: n => `Stage ${n}`,
+      stageNames: ['Answer-only AI', 'Tool-using AI', 'Agent', 'Connecting on-screen tools'],
+      modeLabel: 'How to run', modeScript: 'Script', modeModel: 'In-browser model',
+      scene: 'Scene', model: 'Model', loadBtn: 'Load model', queryPrefix: 'Question: ', query: 'Question',
+      legendSolid: 'Solid: components', legendDashed: 'Dashed: data passed along',
+      deskTitle: 'Workbench', deskNote: 'The agent operates these as tools. You can also use them by hand.',
+      browser: 'Browser', calc: 'Calculator', pixel: 'Pixel art', canvasAria: '16×16 pixel-art canvas',
+      next: 'Next step', auto: 'Auto-play', stop: 'Stop', reset: 'Restart',
+      logHint: 'Swipe sideways to look back at earlier steps. The diagram switches to that step too.',
+      logAria: 'Step log',
+      footer: `The diagram and terms are based on Figure 6-9 of Chip Huyen’s ${FOOTER_LINK} (2025). The shop, products, sales, and the stage 4 site (shop.example) are all fictional, and the shop’s “today” is fixed at 2030-09-13.`,
+      eraser: 'Eraser', backspace: 'Delete one character',
+    },
+    products: [['Travel Mug', 'Tableware'], ['Cat Sticky Notes', 'Stationery'], ['Sky-Blue Planner', 'Stationery'], ['Fluffy Socks', 'Clothing'],
+      ['Night Owl Blend', 'Food'], ['Wooden Bookmark', 'Stationery'], ['Rainy Day Tote', 'Bags'], ['Starry Sky Notebook', 'Stationery']],
+    pal: { '.': 'empty', k: 'black', w: 'white', a: 'gray', r: 'red', o: 'orange', y: 'yellow', g: 'green', b: 'blue', s: 'light blue', p: 'pink', n: 'brown' },
+    err: {
+      calcOnly: 'Use an expression with only digits and + - * / ( )', paren: 'A parenthesis is not closed',
+      cantRead: 'Cannot read the expression', cantCalc: 'Cannot calculate this',
+      dateFormat: 'Give dates in the form YYYY-MM-DD', startAfterEnd: 'start_date is later than end_date',
+      numRange: n => `num_products must be an integer from 1 to ${n}`,
+      noData: (a, b, c, d) => `There is no sales data for ${a} to ${b} (data covers ${c} to ${d})`,
+      noProduct: k => `No product named "${k}" was found`,
+      deskReset: 'The workbench was reset', urlRequired: 'Specify a url',
+      notUrl: u => `"${u}" cannot be read as a URL`,
+      onlySite: `This browser can only open the shop’s site (${SITE}/)`,
+      page404: u => `Page not found (404): ${u}`,
+      calcError: 'Error', exprRequired: 'Specify an expression',
+      noKey: k => `The calculator has no "${k}" key. Use only digits and + - * / ( ) .`,
+      artEmpty: 'art is empty',
+      tooManyRows: n => `Use at most ${PIX} rows (there are ${n})`,
+      rowTooLong: (i, n) => `Row ${i} is longer than ${PIX} characters (${n})`,
+      badChar: (i, c, all) => `"${c}" in row ${i} is not allowed. Only ${all} can be used`,
+      noDots: 'There are no colored dots',
+      noTool: t => `There is no tool named "${t}" on the list`,
+      missingArgs: l => `Missing arguments: ${l}`, extraArgs: l => `Arguments this tool does not take: ${l}`,
+    },
+    tools: {
+      get_today_date: 'Returns today’s date',
+      fetch_top_products: 'Returns products ordered by units sold in the period, most first',
+      start_date: 'First day of the period (YYYY-MM-DD)', end_date: 'Last day of the period (YYYY-MM-DD)', num_products: 'How many top products to return',
+      fetch_product_info: 'Returns a product’s price, category, and stock', product_name: 'Product name (exact)',
+      calculator: 'Evaluates a math expression', expression: 'An expression using only digits and + - * / ( )',
+      open_page: `Opens a page of the shop’s site (${SITE}/) in the browser and returns its title, text, and links`, url: 'URL of the page to open',
+      desk_calculator: 'Presses the calculator keys to evaluate an expression', desk_expression: 'An expression using only digits and + - * / ( ) .',
+      draw_pixels: `Draws a picture on the pixel-art canvas (${PIX}×${PIX}). The previous picture is erased`,
+      art: legend => `The picture. Each row is up to ${PIX} characters, rows are separated by / (up to ${PIX} rows). Characters: ${legend}`,
+    },
+    kits: {
+      shop: {
+        planRules: ['For periods relative to today, such as "last week" or "this month", check today’s date first.'],
+        planExamples: `Question: "How much is the Starry Sky Notebook?"
+{"thought":"Looking up the product info gives the price.","steps":["fetch_product_info"]}
+Question: "What sold best last week?"
+{"thought":"Today's date is needed to set last week's range. Then check the sales ranking.","steps":["get_today_date","fetch_top_products"]}`,
+        argRules: [
+          'Read values from the question and the outputs so far. Do not invent product names or dates that are not in the outputs.',
+          '"Last week" means the 7 days up to and including today.',
+          'If the plan calls the same tool twice, choose something not yet looked up.',
+        ],
+        toolsLead: 'The Planner can plan only with the tools on this list. What is on the list sets the limits of what the agent can do.',
+        runNote: '',
+      },
+      desk: {
+        planRules: [
+          'Look up product names and prices on the site before using them. Do not assume.',
+          `Open the site from its top page (${SITE}/) and follow the links.`,
+        ],
+        planExamples: `Question: "What is 128×45?"
+{"thought":"Just use the calculator.","steps":["calculator"]}
+Question: "Find the cheapest product on the shop's site"
+{"thought":"Open the top page to check its links, then open the product list page.","steps":["open_page","open_page"]}`,
+        argRules: [
+          'Read values from the question and the outputs so far. Do not invent product names or prices that are not in the outputs.',
+          `The first URL is the top page ${SITE}/ . After that, choose from the URLs in the links of the pages you opened.`,
+          'In expressions, use the price numbers exactly as written in the outputs.',
+          'For pixel art, draw the shape of the thing in the question using only the allowed characters.',
+        ],
+        toolsLead: 'This time the tools are the browser, calculator, and pixel-art canvas on the workbench below the diagram. When called, they actually move on screen.',
+        runNote: ' The workbench tool moves on screen.',
+      },
+    },
+    prompt: {
+      planner: ({ inv, rules, examples, hist, query }) => `You are the agent's "Planner". Make a plan to answer the question. A plan is a list of the names of the tools to use, in the order they will be called.
+
+Available tools:
+${inv}
+
+Rules:
+- Use only the tools above.
+- Do not write arguments (they are decided at execution time).
+- At most ${MAX_STEPS} steps.
+${rules}
+
+Examples:
+${examples}
+${hist}
+Question: "${query}"
+Answer with JSON only.`,
+      history: items => '\nPrevious plans and why they were sent back:\n' + items.map((x, i) =>
+        `Plan ${i + 1}: ${JSON.stringify(x.plan)}\nReason: ${x.feedback}`).join('\n') + '\nMake a plan that avoids the same mistake.\n',
+      none: '(none yet)', done: ' (done)', now: ' (now)',
+      param: (k, isInt, desc) => `- ${k} (${isInt ? 'integer' : 'string'}): ${desc}`,
+      args: ({ query, planLine, history, sig, desc, params, rules }) => `You are the agent's "Executor". Decide the arguments for calling the next tool in the plan.
+
+Question: "${query}"
+
+Plan:
+${planLine}
+
+Tool outputs so far:
+${history}
+
+Tool to call now: ${sig}
+${desc}
+Arguments:
+${params}
+
+Rules:
+${rules}
+
+Answer with the arguments as JSON only.`,
+      judge: ({ query, history }) => `You are the agent's "Evaluator". Using only the tool outputs as evidence, decide whether the question can be answered.
+
+Question: "${query}"
+
+Tool outputs:
+${history}
+
+If it can be answered: {"done": true, "answer": "the answer to the question (1-2 sentences in English)", "feedback": ""}
+If something is missing: {"done": false, "answer": "", "feedback": "what is missing, and advice for the next plan"}
+
+Answer with JSON only.`,
+      answerOnly: query => `Answer the following question in 1-2 sentences in English.
+
+Question: "${query}"`,
+      pick: ({ inv, query, example }) => `To answer the question, choose one tool and call it.
+
+Available tools:
+${inv}
+
+Question: "${query}"
+
+Answer with the call as JSON only.
+Example: ${example}`,
+      answerWith: ({ query, call, output }) => `Using only the tool output as evidence, answer the question in 1-2 sentences in English. If the output does not tell you the answer, say that you don't know.
+
+Question: "${query}"
+Tool call: ${call}
+Tool output: ${output}`,
+    },
+    script: {
+      qMain: 'What is the price of the product that sold best last week?',
+      qSimple: 'How much is the Sky-Blue Planner?',
+      qDesk: 'Find this month’s featured product on the shop’s site, calculate the cost of buying 3, and draw that product as pixel art',
+      chipShop: ['What is the total price of last week’s top 2 sellers?'],
+      chipDesk: ['Check the news and calculate the cost of 5 Starry Sky Notebooks at the fair price', 'Draw a red heart in pixel art'],
+      badge: 'Script (stand-in for the model)',
+      goodThought: 'Setting the range for "last week" needs today’s date. Once I know the name of the top seller, I can look up its price.',
+      goodAnswer: (a, b, name, price) => `The best-selling product last week (${a} to ${b}) was the ${name}, and its price is ${price}.`,
+      scenes: {
+        smooth: 'Succeeds smoothly',
+        badtool: 'Puts a tool that is not on the list into the plan',
+        badtool1: 'Searching the web for best sellers would be quick. Then check the price with the product info.',
+        badtool2: 'web_search is not available. Use fetch_top_products from the list to check the sales ranking. To set the period, check today’s date first.',
+        baddate: 'Assumes the dates',
+        baddate1: 'Check last week’s top seller, then look at that product’s price.',
+        baddate2: 'I set the period without checking what day it is. First check today with get_today_date, then work out last week’s range from it.',
+      },
+      deskThought: 'I don’t know the featured product or its price yet. Open the top page, go to the featured page, and read the price. Calculate with that price, then draw the picture.',
+      deskAnswer: (name, price, total) => `This month’s featured product is the ${name} (${price}), so 3 of them cost ${total}. I drew a mug on the canvas.`,
+      deskScenes: {
+        desk: 'Uses the three tools in order',
+        guess: 'Calculates without checking the price',
+        guess1: 'The featured product is probably the mug, and it should be about ¥1,500. Just calculate right away and draw the picture.',
+        guessFeedback: 'The price ¥1,500 does not appear in any tool output. Check the featured product and its price on the site before calculating.',
+        guess2: 'I assumed the price. First open the site’s top page, read the product name and price on the featured page, then calculate.',
+        badurl: 'Opens a guessed page URL',
+        badurlPath: '/featured',
+        badurl1: 'The featured page should be at /featured. Read the price there, calculate, and draw the picture.',
+        badurl2: 'I guessed the URL, and the page did not exist. Open the top page and choose the real URL from its links.',
+      },
+      guessAnswer: 'Like most planners, the Sky-Blue Planner usually costs around ¥1,000.',
+      answerWith: (name, price) => `The ${name} costs ${price}.`,
+    },
+    pages: (P, yen) => ({
+      '/': {
+        title: 'Sky-Blue General Store',
+        text: ['Welcome. We are a small shop full of goods that make every day a little more fun.', 'Use the links below to see this month’s featured item and the product list.'],
+        links: [['Featured this month', '/pickup'], ['Products', '/products'], ['News', '/news']],
+      },
+      '/pickup': {
+        title: 'Featured this month',
+        text: [`This month’s featured product is the "${P[0].name}".`, `The price is ${yen(P[0].price)} (tax included). A white mug with a blue stripe that recalls the sky on a trip.`],
+        links: [['Products', '/products'], ['Back to top', '/']],
+      },
+      '/products': {
+        title: 'Products',
+        text: P.map(p => `${p.name} (${p.category}) … ${yen(p.price)}`),
+        links: [['Featured this month', '/pickup'], ['Back to top', '/']],
+      },
+      '/news': {
+        title: 'News',
+        text: ['Autumn Stationery Fair: from 2030-09-01 to 09-30, all stationery is 10% off.', 'The Rainy Day Tote is expected back in stock in late September.'],
+        links: [['Products', '/products'], ['Back to top', '/']],
+      },
+    }),
+    models: ['Qwen3.5 2B (standard, about 2.2 GB of GPU memory)', 'Qwen3.5 0.8B (light, about 1.6 GB)', 'Qwen3.5 4B (smarter, about 3.9 GB)',
+      'Gemma 2 2B JPN (tuned for Japanese, about 1.9 GB)', 'Qwen2.5 1.5B (about 1.6 GB)'],
+    nodes: {},
+    layouts: [
+      'Stage 1 diagram. Arrows go from Query to Model and from Model to Answer.',
+      'Stage 2 diagram. An arrow goes from Query to Model, calls and outputs go back and forth between Model and Tools, and an arrow goes from Model to Answer.',
+      'Stage 3 diagram. Query, Planner, Generated plan, Evaluator, Executor, Tools, Tool outputs, and Finish are connected by arrows.',
+      'Stage 4 diagram. As in stage 3, Query, Planner, Generated plan, Evaluator, Executor, Tools, Tool outputs, and Finish are connected by arrows. The tools are the browser, calculator, and pixel-art canvas on the workbench.',
+    ],
+    stageDesc: [
+      'The model receives the question and writes an answer using only what it learned in training.',
+      'Given a list of tools, the model calls a tool, reads its output, and then writes the answer.',
+      'For questions that need several tool calls, the agent makes a plan, checks it, executes it, and checks the results.',
+      'The agent keeps the same shape as in stage 3, but its tools are swapped for the browser, calculator, and pixel-art canvas on the workbench. Calling a tool actually moves the workbench.',
+    ],
+    c: {
+      blank: 'Nothing has been opened yet.', loading: 'Loading…',
+      showPrompt: 'Show the prompt given to the model', thinking: 'The model is thinking…',
+      modelBadge: 'Generated by the model', codeRun: 'Run by code', codeJudge: 'Judged by code',
+      judgeUnreadable: 'Could not read the Evaluator’s output as JSON.', judgeNoAnswer: 'The question could not be answered from the tool outputs alone.',
+      empty: '(empty)', noAnswer: '(No answer came out)',
+      answer: 'Answer', truthCheck: 'Fact check', toolList: 'Tool list', call: 'Call', output: 'Output', outputErr: 'Output (error)',
+      thought: 'Thought', plan: 'Plan', reason: 'Reason', draft: 'Draft answer', reasonSent: 'Reason attached',
+      truth: (name, price) => `According to the shop’s data, the ${name} costs ${price}.`,
+      nextStage: (n, name) => `Go to stage ${n}: ${name}`,
+      s1QueryTitle: 'The question arrives',
+      s1QueryLead: 'All the model has is the knowledge it learned in training and the question that just arrived. It cannot see the shop’s data.',
+      s1ModelTitle: 'Writes the answer',
+      s1ModelLead: 'It writes a sentence from what it already knows. Asked about something it doesn’t know, it either can’t answer or makes up something plausible.',
+      s1Next: 'With a way to look up the shop’s data, it would not have to guess. In the next stage, we give the model tools.',
+      s2QueryTitle: 'The question and a list of tools arrive',
+      s2QueryLead: 'The difference from stage 1 is that a list of tools comes along with the question. Tools are functions that look up the shop’s data or do calculations.',
+      s2PickTitle: 'Writes a tool call',
+      s2PickLead: 'The model cannot run tools by itself. It only writes text saying "please call this tool with these arguments."',
+      s2RunTitle: 'The tool runs',
+      s2RunLead: 'The program reads the call text and runs the actual function. This happens outside the model.',
+      s2AnswerTitle: 'Reads the output and writes the answer',
+      s2AnswerLead: 'The tool output is sent back to the model along with the question. The model reads it and writes the answer.',
+      s2ToolErr: 'The tool returned an error, so I can’t answer.',
+      s2Next: q => `Questions that need only one tool call can be answered this way. Questions like "${q}", which need several tools in the right order, call for planning and checking.`,
+      s3QueryLead: 'This is the entrance to the agent. The question is handed to the Planner.',
+      s3ToolsTitle: 'The list of available tools is handed over',
+      planTitle: 'Makes a plan', replanTitle: n => `Remakes the plan (attempt ${n})`,
+      planLead: 'It decides only the order in which to call tools. Nothing runs yet. Arguments are decided after seeing the previous tool’s result, so they are not written here.',
+      replanLead: 'It reads why the plan was sent back and rebuilds it.',
+      noPlan: '(No readable plan came out)',
+      checkTitle: 'Checks the plan', checkLead: 'Before execution, the plan is checked mechanically. A plan that fails is not executed.',
+      checkOk: 'Passed. On to execution.', checkNg: 'Failed. This plan will not be executed.',
+      vNotEmpty: 'The plan is not empty', vUnknown: l => `Uses tools not on the list: ${l}`, vKnown: 'Uses only tools on the list',
+      vMax: n => `At most ${MAX_STEPS} steps (${n} steps)`,
+      whyEmpty: 'Could not read a plan (there are no tool names in it).',
+      whyUnknown: (l, all) => `${l} is not on the tool list. Only ${all} can be used.`,
+      whyMax: `Too many steps (keep it within ${MAX_STEPS}).`,
+      recvTitle: 'Receives the plan', recvLead: 'Only a plan that passes the check reaches the Executor. From here, it calls the tools in order.',
+      callTitle: (i, n) => `Calls a tool (${i}/${n})`,
+      callFirst: 'Here, for the first time, it decides the arguments and calls the tool.',
+      callNext: 'It looks at the outputs so far, decides the arguments, and calls the next tool.',
+      callNoArgs: 'This tool takes no arguments, so it is called as is.',
+      stepError: (i, name, msg) => `Step ${i}, ${name}, returned an error: ${msg}`,
+      resultTitle: 'Checks the results',
+      resultErrLead: 'A tool output contains an error, so it fails without even asking the model.',
+      resultLead: 'It judges whether the tool outputs are enough to answer the question.',
+      notYet: 'Cannot answer yet.', canAnswer: 'Can answer.',
+      finishTitle: 'Returns the answer',
+      s3Next: 'Tools don’t have to be functions; parts of the screen work too. In the next stage, the browser, calculator, and pixel-art canvas inside this page become tools.',
+      backTitle: 'Sends it back to the Planner', backLead: 'It returns the plan to the Planner with the reason attached. The Planner reads this reason when making the next plan.',
+      stopTitle: 'Stops',
+      stopLead: `It made a plan ${MAX_ATTEMPTS} times without reaching an answer, so it stops here. Without a limit on attempts, an agent would keep spending time and compute.`,
+      noFinal: 'Could not produce an answer.',
+      stats: (a, t, m, script) => `Plans: ${a}, tool calls: ${t}, model calls: ${m}${script ? ' (stand-ins in script mode)' : ''}`,
+      needModel: 'Load a model to run it. While it loads, you can follow the flow with "Script".',
+      pressNext: (desc, planner) => `${desc} Press "Next step" to send the question to the ${planner ? 'Planner' : 'model'}.`,
+      errWho: 'Error', errTitle: 'This step could not be run',
+      errLead: 'The model call failed. Press "Restart" to try again, or load a different model.',
+      ready: 'Loaded. Press "Next step" to run it.',
+      noGpu: 'This browser does not support WebGPU. Open this page in Chrome or Edge on a PC.',
+      firstLoad: 'The first time, downloading the model takes a few minutes. After that, the copy saved in your browser is used.',
+      fetchLib: 'Fetching the library…',
+      progress: (p, t) => `Loading ${p}%  ${t}`,
+      loadFail: msg => `Could not load the model. It won’t work where downloads from outside are blocked, such as previews inside a chat. Put this HTML on your own server and open it in Chrome or Edge on a PC. (${msg})`,
+    },
+  },
+
+  ko: {
+    htmlLang: 'ko', locale: 'ko-KR',
+    yen: n => `${n.toLocaleString('ko-KR')}엔`,
+    priceRe: /([\d,]+)\s*엔/,
+    ui: {
+      title: '에이전트가 질문에 답하기까지',
+      intro: '답의 문장을 만들기만 하는 AI에서, 도구를 쓰는 AI, 그리고 에이전트로. 마지막에는 페이지 안의 브라우저·계산기·도트 그림 캔버스를 도구로 연결합니다. 네 단계를 차례로, 한 걸음씩 진행하며 보는 데모입니다.',
+      langAria: '언어', stagesAria: '단계', setupAria: '설정',
+      stageNo: n => `${n}단계`,
+      stageNames: ['답하기만 하는 AI', '도구를 쓰는 AI', '에이전트', '화면의 도구를 연결하기'],
+      modeLabel: '실행 방식', modeScript: '대본', modeModel: '브라우저 내 모델',
+      scene: '장면', model: '모델', loadBtn: '모델 불러오기', queryPrefix: '질문: ', query: '질문',
+      legendSolid: '실선은 구성 요소', legendDashed: '점선은 주고받는 데이터',
+      deskTitle: '작업대', deskNote: '에이전트가 도구로 조작합니다. 직접 만져 볼 수도 있습니다.',
+      browser: '브라우저', calc: '계산기', pixel: '도트 그림', canvasAria: '16×16 도트 그림 캔버스',
+      next: '다음 스텝', auto: '자동으로 진행', stop: '멈추기', reset: '처음부터',
+      logHint: '옆으로 밀면 이전 스텝을 다시 볼 수 있습니다. 그림도 그 스텝으로 바뀝니다.',
+      logAria: '스텝 기록',
+      footer: `그림과 용어는 Chip Huyen의 ${FOOTER_LINK}(2025) 그림 6-9를 바탕으로 했습니다. 가게도 상품도 매출도, 4단계의 사이트(shop.example)도 가상의 데이터이며, 가게의 ‘오늘’은 2030-09-13으로 고정되어 있습니다.`,
+      eraser: '지우개', backspace: '한 글자 지우기',
+    },
+    products: [['여행하는 머그컵', '식기'], ['고양이 포스트잇', '문구'], ['하늘색 수첩', '문구'], ['폭신폭신 양말', '의류'],
+      ['올빼미 블렌드', '식품'], ['나무 책갈피', '문구'], ['비 오는 날 토트백', '가방'], ['별하늘 노트', '문구']],
+    pal: { '.': '빈칸', k: '검정', w: '흰색', a: '회색', r: '빨강', o: '주황', y: '노랑', g: '초록', b: '파랑', s: '하늘색', p: '분홍', n: '갈색' },
+    err: {
+      calcOnly: '숫자와 + - * / ( )만 쓴 식으로 해 주세요', paren: '괄호가 닫히지 않았습니다',
+      cantRead: '식을 읽을 수 없습니다', cantCalc: '계산할 수 없습니다',
+      dateFormat: '날짜는 YYYY-MM-DD 형식으로 지정해 주세요', startAfterEnd: 'start_date가 end_date보다 뒤입니다',
+      numRange: n => `num_products는 1~${n}의 정수로 해 주세요`,
+      noData: (a, b, c, d) => `${a}~${b}의 판매 데이터는 없습니다(있는 것은 ${c}~${d})`,
+      noProduct: k => `"${k}" 상품을 찾을 수 없습니다`,
+      deskReset: '작업대가 초기화되었습니다', urlRequired: 'url을 지정해 주세요',
+      notUrl: u => `"${u}": URL로 읽을 수 없습니다`,
+      onlySite: `이 브라우저로 열 수 있는 것은 가게 사이트(${SITE}/)뿐입니다`,
+      page404: u => `페이지를 찾을 수 없습니다(404): ${u}`,
+      calcError: '오류', exprRequired: '식을 지정해 주세요',
+      noKey: k => `계산기에 "${k}" 키는 없습니다. 숫자와 + - * / ( ) .만 쓴 식으로 해 주세요`,
+      artEmpty: 'art가 비어 있습니다',
+      tooManyRows: n => `${PIX}행 이하로 해 주세요(${n}행 있습니다)`,
+      rowTooLong: (i, n) => `${i}행째가 ${PIX}글자를 넘습니다(${n}글자)`,
+      badChar: (i, c, all) => `${i}행째의 "${c}"는 쓸 수 없는 문자입니다. 쓸 수 있는 것은 ${all}뿐입니다`,
+      noDots: '색이 있는 도트가 하나도 없습니다',
+      noTool: t => `"${t}" 도구는 목록에 없습니다`,
+      missingArgs: l => `인수가 부족합니다: ${l}`, extraArgs: l => `이 도구에 없는 인수가 있습니다: ${l}`,
+    },
+    tools: {
+      get_today_date: '오늘 날짜를 돌려준다',
+      fetch_top_products: '기간 내 판매 개수가 많은 순으로 상품을 돌려준다',
+      start_date: '기간의 첫날(YYYY-MM-DD)', end_date: '기간의 마지막 날(YYYY-MM-DD)', num_products: '상위 몇 개를 돌려줄지',
+      fetch_product_info: '상품의 가격·카테고리·재고를 돌려준다', product_name: '상품명(정확하게)',
+      calculator: '수식을 계산한다', expression: '숫자와 + - * / ( )만 쓴 식',
+      open_page: `브라우저로 가게 사이트(${SITE}/)의 페이지를 열고 제목·본문·링크를 돌려준다`, url: '열 페이지의 URL',
+      desk_calculator: '계산기 키를 눌러 식을 계산한다', desk_expression: '숫자와 + - * / ( ) .만 쓴 식',
+      draw_pixels: `도트 그림 캔버스(${PIX}×${PIX})에 그림을 그린다. 이전 그림은 지워진다`,
+      art: legend => `그림. 한 행은 ${PIX}글자까지, 행은 /로 구분한다(${PIX}행까지). 문자의 의미: ${legend}`,
+    },
+    kits: {
+      shop: {
+        planRules: ['"지난주", "이번 달"처럼 오늘을 기준으로 한 기간은 오늘 날짜를 확인한 뒤에 정한다.'],
+        planExamples: `질문: "별하늘 노트는 얼마?"
+{"thought":"상품 정보를 찾으면 가격을 알 수 있다.","steps":["fetch_product_info"]}
+질문: "지난주 가장 많이 팔린 상품은?"
+{"thought":"지난주 범위를 정하려면 오늘 날짜가 필요하다. 그다음 판매 순위를 조사한다.","steps":["get_today_date","fetch_top_products"]}`,
+        argRules: [
+          '값은 질문과 지금까지의 출력에서 읽어 낸다. 출력에 없는 상품명이나 날짜를 만들지 않는다.',
+          '"지난주"는 오늘을 포함한 최근 7일로 한다.',
+          '같은 도구를 두 번 부르는 계획이라면, 아직 조사하지 않은 것을 고른다.',
+        ],
+        toolsLead: 'Planner가 계획에 쓸 수 있는 것은 이 목록에 있는 도구뿐입니다. 목록의 내용이 에이전트가 할 수 있는 일의 범위를 정합니다.',
+        runNote: '',
+      },
+      desk: {
+        planRules: [
+          '상품명이나 가격은 사이트에서 조사한 뒤에 쓴다. 짐작으로 정하지 않는다.',
+          `사이트는 첫 페이지(${SITE}/)부터 열고 링크를 따라간다.`,
+        ],
+        planExamples: `질문: "128×45는 얼마?"
+{"thought":"계산기로 계산하면 된다.","steps":["calculator"]}
+질문: "가게 사이트에서 가장 싼 상품을 찾아 줘"
+{"thought":"첫 페이지를 열어 링크를 확인하고, 상품 목록 페이지를 연다.","steps":["open_page","open_page"]}`,
+        argRules: [
+          '값은 질문과 지금까지의 출력에서 읽어 낸다. 출력에 없는 상품명이나 가격을 만들지 않는다.',
+          `URL은 처음에는 첫 페이지 ${SITE}/ . 그 뒤로는 연 페이지의 links에 있는 URL에서 고른다.`,
+          '계산식에는 출력에 적힌 가격 숫자를 그대로 쓴다.',
+          '도트 그림은 질문에 나온 것의 모양을, 정해진 문자만으로 그린다.',
+        ],
+        toolsLead: '이번 도구는 그림 아래 작업대에 놓인 브라우저·계산기·도트 그림 캔버스입니다. 부르면 화면 위에서 실제로 움직입니다.',
+        runNote: ' 작업대의 도구가 화면 위에서 움직입니다.',
+      },
+    },
+    prompt: {
+      planner: ({ inv, rules, examples, hist, query }) => `당신은 에이전트의 "Planner(계획 담당)"입니다. 질문에 답하기 위한 계획을 세워 주세요. 계획은 쓸 도구의 이름을 부르는 순서대로 나열한 것입니다.
+
+쓸 수 있는 도구:
+${inv}
+
+규칙:
+- 위의 도구만 쓴다.
+- 인수는 쓰지 않는다(실행할 때 정한다).
+- ${MAX_STEPS}스텝 이내.
+${rules}
+
+예:
+${examples}
+${hist}
+질문: "${query}"
+JSON으로만 답해 주세요.`,
+      history: items => '\n지금까지의 계획과 되돌려진 이유:\n' + items.map((x, i) =>
+        `${i + 1}번째 계획: ${JSON.stringify(x.plan)}\n이유: ${x.feedback}`).join('\n') + '\n같은 실패를 하지 않는 계획으로 해 주세요.\n',
+      none: '(아직 없습니다)', done: '(완료)', now: '(지금 여기)',
+      param: (k, isInt, desc) => `- ${k}(${isInt ? '정수' : '문자열'}): ${desc}`,
+      args: ({ query, planLine, history, sig, desc, params, rules }) => `당신은 에이전트의 "Executor(실행 담당)"입니다. 계획의 다음 도구를 부르기 위한 인수를 정해 주세요.
+
+질문: "${query}"
+
+계획:
+${planLine}
+
+지금까지의 도구 출력:
+${history}
+
+지금 부를 도구: ${sig}
+${desc}
+인수:
+${params}
+
+규칙:
+${rules}
+
+인수를 JSON으로만 답해 주세요.`,
+      judge: ({ query, history }) => `당신은 에이전트의 "Evaluator(평가 담당)"입니다. 도구의 출력만을 근거로, 질문에 답할 수 있는지 판정해 주세요.
+
+질문: "${query}"
+
+도구의 출력:
+${history}
+
+답할 수 있을 때: {"done": true, "answer": "질문에 대한 답(한국어로 1~2문장)", "feedback": ""}
+부족할 때: {"done": false, "answer": "", "feedback": "무엇이 부족한지, 다음 계획에 대한 조언"}
+
+JSON으로만 답해 주세요.`,
+      answerOnly: query => `다음 질문에 한국어로 1~2문장으로 답해 주세요.
+
+질문: "${query}"`,
+      pick: ({ inv, query, example }) => `질문에 답하기 위해 도구를 하나 골라 불러 주세요.
+
+쓸 수 있는 도구:
+${inv}
+
+질문: "${query}"
+
+호출을 JSON으로만 답해 주세요.
+예: ${example}`,
+      answerWith: ({ query, call, output }) => `도구의 출력만을 근거로, 질문에 한국어로 1~2문장으로 답해 주세요. 출력에서 답을 알 수 없을 때는 모른다고 답해 주세요.
+
+질문: "${query}"
+도구 호출: ${call}
+도구 출력: ${output}`,
+    },
+    script: {
+      qMain: '지난주 가장 많이 팔린 상품의 가격은?',
+      qSimple: '하늘색 수첩은 얼마예요?',
+      qDesk: '가게 사이트에서 이번 달 추천 상품을 찾아보고, 3개 사면 얼마인지 계산한 뒤, 그 상품을 도트 그림으로 그려 줘',
+      chipShop: ['지난주 판매 상위 2개 상품의 가격을 합하면 얼마?'],
+      chipDesk: ['알림을 보고, 별하늘 노트 5권을 페어 가격으로 사면 얼마인지 계산해 줘', '빨간 하트를 도트 그림으로 그려 줘'],
+      badge: '대본(모델 대역)',
+      goodThought: '"지난주" 범위를 정하려면 오늘 날짜가 필요하다. 판매 1위 상품명을 알면 그 가격을 찾을 수 있다.',
+      goodAnswer: (a, b, name, price) => `지난주(${a}~${b}) 가장 많이 팔린 상품은 "${name}"이고, 가격은 ${price}입니다.`,
+      scenes: {
+        smooth: '순조롭게 성공한다',
+        badtool: '목록에 없는 도구를 계획에 넣어 버린다',
+        badtool1: '인터넷에서 잘 팔리는 상품을 검색하면 빠르다. 그다음 상품 정보로 가격을 본다.',
+        badtool2: 'web_search는 쓸 수 없다. 목록에 있는 fetch_top_products로 판매 순위를 조사한다. 기간을 정하기 위해 먼저 오늘 날짜를 확인한다.',
+        baddate: '날짜를 짐작으로 정해 버린다',
+        baddate1: '지난주 판매 1위를 조사하고, 그 상품의 가격을 보면 된다.',
+        baddate2: '오늘이 며칠인지 확인하지 않고 기간을 정했다. 먼저 get_today_date로 오늘을 조사하고, 거기서 지난주 범위를 정한다.',
+      },
+      deskThought: '추천 상품도 가격도 아직 모른다. 첫 페이지를 열고, 추천 페이지로 가서 가격을 읽는다. 그 가격으로 계산한 뒤 그림을 그린다.',
+      deskAnswer: (name, price, total) => `이번 달 추천 상품은 "${name}"(${price})이고, 3개면 ${total}입니다. 캔버스에 머그컵을 그렸습니다.`,
+      deskScenes: {
+        desk: '세 가지 도구를 차례로 쓴다',
+        guess: '가격을 조사하지 않고 계산해 버린다',
+        guess1: '추천 상품은 아마 머그컵이고, 1,500엔 정도일 것이다. 바로 계산하고 그림을 그리면 된다.',
+        guessFeedback: '1500엔이라는 가격은 어느 도구의 출력에도 없습니다. 추천 상품도 가격도 사이트에서 확인한 뒤에 계산해 주세요.',
+        guess2: '가격을 짐작으로 정했다. 먼저 사이트 첫 페이지를 열고, 추천 페이지에서 상품명과 가격을 읽은 뒤 계산한다.',
+        badurl: '페이지 URL을 짐작으로 연다',
+        badurlPath: '/chucheon',
+        badurl1: '추천 페이지는 /chucheon에 있을 것이다. 거기서 가격을 읽고 계산한 뒤 그림을 그린다.',
+        badurl2: 'URL을 추측했더니 페이지가 없었다. 첫 페이지를 열고, 링크에서 진짜 URL을 고른다.',
+      },
+      guessAnswer: '하늘색 수첩은 일반적인 수첩과 마찬가지로 1,000엔 전후인 경우가 많습니다.',
+      answerWith: (name, price) => `"${name}"의 가격은 ${price}입니다.`,
+    },
+    pages: (P, yen) => ({
+      '/': {
+        title: '하늘색 잡화점',
+        text: ['어서 오세요. 매일을 조금 즐겁게 해 주는 잡화를 모은 작은 가게입니다.', '아래 링크에서 추천 상품과 상품 목록을 볼 수 있습니다.'],
+        links: [['이달의 추천', '/pickup'], ['상품 목록', '/products'], ['알림', '/news']],
+      },
+      '/pickup': {
+        title: '이달의 추천',
+        text: [`이달의 추천 상품은 "${P[0].name}"입니다.`, `가격은 ${yen(P[0].price)}(세금 포함). 여행지의 하늘을 떠올리게 하는 파란 줄무늬가 들어간 흰 머그컵입니다.`],
+        links: [['상품 목록', '/products'], ['처음으로 돌아가기', '/']],
+      },
+      '/products': {
+        title: '상품 목록',
+        text: P.map(p => `${p.name}(${p.category}) … ${yen(p.price)}`),
+        links: [['이달의 추천', '/pickup'], ['처음으로 돌아가기', '/']],
+      },
+      '/news': {
+        title: '알림',
+        text: ['가을 문구 페어: 2030-09-01~09-30에는 문구 상품이 모두 10% 할인입니다.', '비 오는 날 토트백은 9월 하순에 재입고될 예정입니다.'],
+        links: [['상품 목록', '/products'], ['처음으로 돌아가기', '/']],
+      },
+    }),
+    models: ['Qwen3.5 2B(표준, GPU 메모리 약 2.2GB)', 'Qwen3.5 0.8B(가벼움, 약 1.6GB)', 'Qwen3.5 4B(똑똑함, 약 3.9GB)',
+      'Gemma 2 2B JPN(일본어용, 약 1.9GB)', 'Qwen2.5 1.5B(약 1.6GB)'],
+    nodes: { query: '질문', planner: '계획 담당', plan: '계획', evaluator: '평가 담당', executor: '실행 담당', tools: '도구', outputs: '도구 출력', finish: '완료', model: '모델', answer: '답' },
+    layouts: [
+      '1단계 그림. Query에서 Model로, Model에서 Answer로 화살표가 뻗어 있다.',
+      '2단계 그림. Query에서 Model로, Model과 Tools 사이를 호출과 출력이 오가고, Model에서 Answer로 화살표가 뻗어 있다.',
+      '3단계 그림. Query, Planner, Generated plan, Evaluator, Executor, Tools, Tool outputs, Finish가 화살표로 연결되어 있다.',
+      '4단계 그림. 3단계와 마찬가지로 Query, Planner, Generated plan, Evaluator, Executor, Tools, Tool outputs, Finish가 화살표로 연결되어 있다. Tools는 작업대의 브라우저·계산기·도트 그림 캔버스.',
+    ],
+    stageDesc: [
+      '질문을 받아, 학습한 지식만으로 답의 문장을 만듭니다.',
+      '도구 목록을 받은 모델은 도구를 부르고, 그 출력을 읽은 뒤 답을 만듭니다.',
+      '도구를 여러 번 써야 하는 질문에서는 계획을 세우고, 점검하고, 실행하고, 결과를 확인합니다.',
+      '에이전트의 형태는 3단계 그대로 두고, 도구를 작업대의 브라우저·계산기·도트 그림 캔버스로 바꿉니다. 도구를 부르면 작업대가 실제로 움직입니다.',
+    ],
+    c: {
+      blank: '아직 아무것도 열지 않았습니다.', loading: '불러오는 중…',
+      showPrompt: '모델에 건네는 지시문 보기', thinking: '모델이 생각하고 있습니다…',
+      modelBadge: '모델이 생성', codeRun: '코드로 실행', codeJudge: '코드로 판정',
+      judgeUnreadable: '평가 담당의 출력을 JSON으로 읽을 수 없었습니다.', judgeNoAnswer: '도구의 출력만으로는 질문에 답할 수 없었습니다.',
+      empty: '(비어 있음)', noAnswer: '(답이 나오지 않았습니다)',
+      answer: '답', truthCheck: '정답 확인', toolList: '도구 목록', call: '호출', output: '출력', outputErr: '출력(오류)',
+      thought: '생각', plan: '계획', reason: '이유', draft: '답의 안', reasonSent: '붙이는 이유',
+      truth: (name, price) => `가게 데이터에 따르면 "${name}"의 가격은 ${price}입니다.`,
+      nextStage: (n, name) => `${n}단계 "${name}"로 넘어가기`,
+      s1QueryTitle: '질문이 도착한다',
+      s1QueryLead: '모델이 가진 것은 학습으로 익힌 지식과, 방금 도착한 질문뿐입니다. 가게의 데이터는 볼 수 없습니다.',
+      s1ModelTitle: '답의 문장을 만든다',
+      s1ModelLead: '아는 것만으로 문장을 만듭니다. 모르는 것을 물으면 답하지 못하거나, 그럴듯한 내용을 지어내 버립니다.',
+      s1Next: '가게 데이터를 조사할 수단이 있으면 짐작하지 않아도 됩니다. 다음 단계에서는 모델에게 도구를 줍니다.',
+      s2QueryTitle: '질문과 도구 목록이 도착한다',
+      s2QueryLead: '1단계와 다른 점은 도구 목록이 함께 건네진다는 것입니다. 도구는 가게 데이터를 조사하거나 계산하는 함수입니다.',
+      s2PickTitle: '도구 호출을 쓴다',
+      s2PickLead: '모델은 도구를 스스로 움직일 수 없습니다. "이 도구를 이 인수로 불러 달라"는 문장을 쓸 뿐입니다.',
+      s2RunTitle: '도구가 실행된다',
+      s2RunLead: '프로그램이 호출 문장을 읽어 내고 실제 함수를 움직입니다. 이 일은 모델 바깥에서 일어납니다.',
+      s2AnswerTitle: '출력을 읽고 답을 만든다',
+      s2AnswerLead: '도구의 출력이 질문과 함께 모델로 돌아갑니다. 모델은 그것을 읽고 답의 문장을 만듭니다.',
+      s2ToolErr: '도구에서 오류가 났으므로 답할 수 없습니다.',
+      s2Next: q => `도구를 한 번 부르면 충분한 질문은 이것으로 답할 수 있습니다. "${q}"처럼 도구를 여러 번, 올바른 순서로 써야 하는 질문에는 계획과 점검이 필요합니다.`,
+      s3QueryLead: '여기가 에이전트의 입구입니다. 질문은 Planner에게 전달됩니다.',
+      s3ToolsTitle: '쓸 수 있는 도구 목록이 전달된다',
+      planTitle: '계획을 세운다', replanTitle: n => `계획을 다시 세운다(${n}번째)`,
+      planLead: '도구를 부르는 순서만 정합니다. 아직 아무것도 실행하지 않습니다. 인수는 앞 도구의 결과를 보고 정하므로 여기서는 쓰지 않습니다.',
+      replanLead: '되돌려진 이유를 읽고 계획을 다시 세웁니다.',
+      noPlan: '(읽어 낼 수 있는 계획이 나오지 않았습니다)',
+      checkTitle: '계획을 점검한다', checkLead: '실행 전에 계획을 기계적으로 점검합니다. 통과하지 못한 계획은 실행되지 않습니다.',
+      checkOk: '합격. 실행으로 넘어갑니다.', checkNg: '불합격. 이 계획은 실행하지 않습니다.',
+      vNotEmpty: '계획이 비어 있지 않다', vUnknown: l => `목록에 없는 도구가 있다: ${l}`, vKnown: '목록에 있는 도구만 쓰고 있다',
+      vMax: n => `${MAX_STEPS}스텝 이내(${n}스텝)`,
+      whyEmpty: '계획을 읽어 낼 수 없었습니다(도구 이름이 하나도 없습니다).',
+      whyUnknown: (l, all) => `${l}: 도구 목록에 없습니다. 쓸 수 있는 것은 ${all}뿐입니다.`,
+      whyMax: `스텝이 너무 많습니다(${MAX_STEPS} 이내로 해 주세요).`,
+      recvTitle: '계획을 받는다', recvLead: '점검을 통과한 계획만 Executor에게 전달됩니다. 여기서부터 차례로 도구를 부릅니다.',
+      callTitle: (i, n) => `도구를 부른다(${i}/${n})`,
+      callFirst: '여기서 처음으로 인수를 정하고 도구를 부릅니다.',
+      callNext: '지금까지의 출력을 보고 인수를 정한 뒤 다음 도구를 부릅니다.',
+      callNoArgs: '이 도구에는 인수가 없으므로 그대로 부릅니다.',
+      stepError: (i, name, msg) => `스텝 ${i}의 ${name}에서 오류가 났습니다: ${msg}`,
+      resultTitle: '결과를 확인한다',
+      resultErrLead: '도구 출력에 오류가 있으므로 모델에 물어볼 것도 없이 불합격으로 합니다.',
+      resultLead: '도구의 출력으로 질문에 답할 수 있는지 판정합니다.',
+      notYet: '아직 답할 수 없습니다.', canAnswer: '답할 수 있습니다.',
+      finishTitle: '답을 돌려준다',
+      s3Next: '도구는 함수 말고 화면의 부품이어도 됩니다. 다음 단계에서는 페이지 안의 브라우저·계산기·도트 그림 캔버스를 도구로 연결합니다.',
+      backTitle: 'Planner에게 되돌린다', backLead: '이유를 붙여 Planner에게 돌려보냅니다. Planner는 다음 계획에서 이 이유를 읽습니다.',
+      stopTitle: '중단한다',
+      stopLead: `계획을 ${MAX_ATTEMPTS}번 세워도 답에 이르지 못했으므로 여기서 멈춥니다. 횟수 상한이 없으면 에이전트는 시간과 계산을 계속 써 버립니다.`,
+      noFinal: '답을 내지 못했습니다.',
+      stats: (a, t, m, script) => `계획 ${a}회, 도구 호출 ${t}회, 모델 호출 ${m}회${script ? '(대본에서는 대역)' : ''}`,
+      needModel: '모델을 불러오면 실행할 수 있습니다. 기다리는 동안에는 "대본"으로 흐름을 볼 수 있습니다.',
+      pressNext: (desc, planner) => `${desc} "다음 스텝"을 누르면 질문이 ${planner ? 'Planner' : '모델'}에 전달됩니다.`,
+      errWho: '오류', errTitle: '이 스텝을 실행할 수 없었습니다',
+      errLead: '모델 호출이 실패했습니다. "처음부터"로 다시 하거나 다른 모델을 불러와 주세요.',
+      ready: '불러오기를 마쳤습니다. "다음 스텝"으로 실행할 수 있습니다.',
+      noGpu: '이 브라우저는 WebGPU를 지원하지 않습니다. PC의 Chrome이나 Edge로 열어 주세요.',
+      firstLoad: '처음에는 모델 다운로드에 몇 분 걸립니다. 두 번째부터는 브라우저에 저장된 것을 씁니다.',
+      fetchLib: '라이브러리를 가져오는 중…',
+      progress: (p, t) => `불러오는 중 ${p}%  ${t}`,
+      loadFail: msg => `모델을 불러올 수 없었습니다. 채팅 안의 미리보기처럼 외부 다운로드가 막힌 곳에서는 작동하지 않습니다. 이 HTML을 자신의 서버에 올리고 PC의 Chrome이나 Edge로 열어 주세요. (${msg})`,
+    },
+  },
+};
+
+let LANG = 'ja', T = I18N.ja;
+const yen = n => T.yen(n);
+
+/* ---------- 架空の店のデータ ---------- */
+let PRODUCTS = [];
+const DAY = 86400000;
+function parseDate(s) {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s.trim())) return NaN;
+  const t = Date.parse(s.trim() + 'T00:00:00Z');
+  if (Number.isNaN(t) || new Date(t).toISOString().slice(0, 10) !== s.trim()) return NaN;
+  return t;
+}
+const fmtDate = t => new Date(t).toISOString().slice(0, 10);
+const addDays = (s, n) => fmtDate(parseDate(s) + n * DAY);
+const unitsOn = (pi, d) => PRODUCTS[pi].base + ((pi * 7 + d * 13 + pi * d) % 5);
+
+/* ---------- 道具（本物の関数。台本でもモデルでも同じものを呼ぶ） ---------- */
+function calc(expr) {
+  const s = str(expr).replace(/[×]/g, '*').replace(/[÷]/g, '/').replace(/yen/gi, '').replace(/[,，\s円¥엔]/g, '');
+  if (!s || !/^[0-9+\-*/().]+$/.test(s)) throw new Error(T.err.calcOnly);
+  let i = 0;
+  const factor = () => {
+    if (s[i] === '(') { i++; const v = sum(); if (s[i] !== ')') throw new Error(T.err.paren); i++; return v; }
+    if (s[i] === '-') { i++; return -factor(); }
+    const m = /^\d+(\.\d+)?/.exec(s.slice(i));
+    if (!m) throw new Error(T.err.cantRead);
+    i += m[0].length; return parseFloat(m[0]);
+  };
+  const term = () => { let v = factor(); while (s[i] === '*' || s[i] === '/') { const op = s[i++]; const r = factor(); v = op === '*' ? v * r : v / r; } return v; };
+  const sum = () => { let v = term(); while (s[i] === '+' || s[i] === '-') { const op = s[i++]; const r = term(); v = op === '+' ? v + r : v - r; } return v; };
+  const v = sum();
+  if (i < s.length) throw new Error(T.err.cantRead);
+  if (!Number.isFinite(v)) throw new Error(T.err.cantCalc);
+  return Math.round(v * 1e6) / 1e6;
+}
+function fetchTopProducts({ start_date, end_date, num_products }) {
+  const a = parseDate(start_date), b = parseDate(end_date);
+  if (Number.isNaN(a) || Number.isNaN(b)) throw new Error(T.err.dateFormat);
+  if (a > b) throw new Error(T.err.startAfterEnd);
+  const n = Math.floor(Number(num_products));
+  if (!(n >= 1 && n <= PRODUCTS.length)) throw new Error(T.err.numRange(PRODUCTS.length));
+  const lo = Math.max(a, parseDate(DATA_START)), hi = Math.min(b, parseDate(TODAY));
+  if (lo > hi) throw new Error(T.err.noData(start_date, end_date, DATA_START, TODAY));
+  const d0 = parseDate(DATA_START);
+  const totals = PRODUCTS.map((p, pi) => {
+    let u = 0;
+    for (let t = lo; t <= hi; t += DAY) u += unitsOn(pi, Math.round((t - d0) / DAY));
+    return { product_name: p.name, units_sold: u };
+  }).sort((x, y) => y.units_sold - x.units_sold);
+  return { products: totals.slice(0, n) };
+}
+function fetchProductInfo({ product_name }) {
+  const key = str(product_name).trim().replace(/^[「『"'“‘]+|[」』"'”’]+$/g, '');
+  const p = PRODUCTS.find(x => x.name === key);
+  if (!p) throw new Error(T.err.noProduct(key));
+  return { product_name: p.name, price_yen: p.price, category: p.category, stock: p.stock };
+}
+
+// 道具の一式と、それに合わせた指示文の決まり。言語と段階で切り替える。
+let SHOP_TOOLS, DESK_TOOLS, KITS, KIT;
+function buildTools() {
+  const d = T.tools;
+  SHOP_TOOLS = {
+    get_today_date: { emoji: '📅', desc: d.get_today_date, params: {}, run: () => ({ today: TODAY }) },
+    fetch_top_products: {
+      emoji: '🏆', desc: d.fetch_top_products,
+      params: {
+        start_date: { type: 'string', desc: d.start_date },
+        end_date: { type: 'string', desc: d.end_date },
+        num_products: { type: 'integer', desc: d.num_products },
+      },
+      run: fetchTopProducts,
+    },
+    fetch_product_info: { emoji: '🏷️', desc: d.fetch_product_info, params: { product_name: { type: 'string', desc: d.product_name } }, run: fetchProductInfo },
+    calculator: { emoji: '🧮', desc: d.calculator, params: { expression: { type: 'string', desc: d.expression } }, run: ({ expression }) => ({ result: calc(expression) }) },
+  };
+  /* 段階 4 の道具: ページの中の作業台を操作する（中身は後ろの desk） */
+  DESK_TOOLS = {
+    open_page: { emoji: '🌐', desc: d.open_page, params: { url: { type: 'string', desc: d.url } }, run: ({ url }) => desk.openPage(url) },
+    calculator: { emoji: '🧮', desc: d.desk_calculator, params: { expression: { type: 'string', desc: d.desk_expression } }, run: ({ expression }) => desk.calculate(expression) },
+    draw_pixels: {
+      emoji: '🎨', desc: d.draw_pixels,
+      params: { art: { type: 'string', desc: d.art(Object.keys(PAL).map(c => `${c} ${T.pal[c]}`).join(', ')) } },
+      run: ({ art }) => desk.draw(art),
+    },
+  };
+  KITS = { shop: { tools: SHOP_TOOLS, ...T.kits.shop }, desk: { tools: DESK_TOOLS, ...T.kits.desk } };
+  KIT = KITS.shop;
+}
+const sig = name => `${name}(${Object.keys(KIT.tools[name].params).join(', ')})`;
+const fmtCall = (name, args) => `${name}(${Object.entries(args || {}).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(', ')})`;
+const fmtOut = o => JSON.stringify(o, null, 2);
+// 画面に見せるときだけ絵文字を付ける（モデルに渡す指示文では素の名前のまま）
+const em = name => KIT.tools[name]?.emoji || '❓';
+const showName = name => `${em(name)} ${name}`;
+const showSig = name => `${em(name)} ${sig(name)}`;
+const showCall = (name, args) => `${em(name)} ${fmtCall(name, args)}`;
+const toolList = () => h('ul', { class: 'tools' }, Object.keys(KIT.tools).map(n => h('li', null, h('code', { text: showSig(n) }), h('span', { text: KIT.tools[n].desc }))));
+
+/* ---------- モデルに渡す指示文（台本モードでも同じものを見せる） ---------- */
+const inventory = () => Object.keys(KIT.tools).map(n => `- ${sig(n)}: ${KIT.tools[n].desc}`).join('\n');
+function plannerPrompt(ctx) {
+  return T.prompt.planner({
+    inv: inventory(),
+    rules: KIT.planRules.map(r => `- ${r}`).join('\n'),
+    examples: KIT.planExamples,
+    hist: ctx.history.length ? T.prompt.history(ctx.history) : '',
+    query: ctx.query,
+  });
+}
+function historyText(outputs) {
+  return outputs.length
+    ? outputs.map((o, i) => `${i + 1}. ${fmtCall(o.tool, o.args)} → ${JSON.stringify(o.output)}`).join('\n')
+    : T.prompt.none;
+}
+function argsPrompt(ctx, idx) {
+  const name = ctx.plan[idx], t = KIT.tools[name];
+  return T.prompt.args({
+    query: ctx.query,
+    planLine: ctx.plan.map((n, i) => `${i + 1}. ${n}${i < idx ? T.prompt.done : i === idx ? T.prompt.now : ''}`).join('\n'),
+    history: historyText(ctx.outputs),
+    sig: sig(name), desc: t.desc,
+    params: Object.entries(t.params).map(([k, p]) => T.prompt.param(k, p.type === 'integer', p.desc)).join('\n'),
+    rules: KIT.argRules.map(r => `- ${r}`).join('\n'),
+  });
+}
+const judgePrompt = ctx => T.prompt.judge({ query: ctx.query, history: historyText(ctx.outputs) });
+const answerOnlyPrompt = ctx => T.prompt.answerOnly(ctx.query);
+const pickPrompt = ctx => T.prompt.pick({
+  inv: inventory(), query: ctx.query,
+  example: JSON.stringify({ tool: 'fetch_product_info', args: { product_name: PRODUCTS[7].name } }),
+});
+const answerWithPrompt = ctx => T.prompt.answerWith({ query: ctx.query, call: fmtCall(ctx.call.tool, ctx.call.args), output: JSON.stringify(ctx.output) });
+const PICK_SCHEMA = { type: 'object', properties: { tool: { type: 'string' }, args: { type: 'object' } }, required: ['tool', 'args'] };
+const PLAN_SCHEMA = { type: 'object', properties: { thought: { type: 'string' }, steps: { type: 'array', items: { type: 'string' } } }, required: ['thought', 'steps'] };
+const JUDGE_SCHEMA = { type: 'object', properties: { done: { type: 'boolean' }, answer: { type: 'string' }, feedback: { type: 'string' } }, required: ['done', 'answer', 'feedback'] };
+const argsSchema = t => ({
+  type: 'object',
+  properties: Object.fromEntries(Object.entries(t.params).map(([k, p]) => [k, { type: p.type }])),
+  required: Object.keys(t.params),
+});
+
+/* ---------- 頭脳その1: 台本（モデルの代役） ---------- */
+const MUG_ART = [
+  '................',
+  '.....a...a......',
+  '......a...a.....',
+  '.....a...a......',
+  '................',
+  '..kkkkkkkkkk....',
+  '..kwwwwwwwwk....',
+  '..kbbbbbbbbkkk..',
+  '..kwwwwwwwwk.k..',
+  '..kwwwwwwwwk.k..',
+  '..kbbbbbbbbkkk..',
+  '..kwwwwwwwwk....',
+  '..kwwwwwwwwk....',
+  '...kkkkkkkk.....',
+  '................',
+].join('/');
+const priceIn = text => Number((T.priceRe.exec(text) || [, '0'])[1].replace(/,/g, ''));
+let Q_MAIN, Q_SIMPLE, Q_DESK, SCENES, DESK_SCENES, SCENES_BY_STAGE;
+function buildScenes() {
+  const S = T.script, sc = S.scenes, ds = S.deskScenes;
+  Q_MAIN = S.qMain; Q_SIMPLE = S.qSimple; Q_DESK = S.qDesk;
+  const GOOD = {
+    thought: S.goodThought,
+    steps: ['get_today_date', 'fetch_top_products', 'fetch_product_info'],
+    args: [
+      null,
+      o => ({ start_date: addDays(o[0].output.today, -6), end_date: o[0].output.today, num_products: 1 }),
+      o => ({ product_name: o[1].output.products[0].product_name }),
+    ],
+    judge: o => ({
+      done: true, feedback: '',
+      answer: S.goodAnswer(o[1].args.start_date, o[1].args.end_date, o[2].output.product_name, yen(o[2].output.price_yen)),
+    }),
+  };
+  SCENES = [
+    { id: 'smooth', label: sc.smooth, query: Q_MAIN, attempts: [GOOD] },
+    {
+      id: 'badtool', label: sc.badtool, query: Q_MAIN,
+      attempts: [
+        { thought: sc.badtool1, steps: ['web_search', 'fetch_product_info'], args: [], judge: null },
+        { ...GOOD, thought: sc.badtool2 },
+      ],
+    },
+    {
+      id: 'baddate', label: sc.baddate, query: Q_MAIN,
+      attempts: [
+        {
+          thought: sc.baddate1,
+          steps: ['fetch_top_products', 'fetch_product_info'],
+          args: [() => ({ start_date: '2024-06-10', end_date: '2024-06-16', num_products: 1 })],
+          judge: null,
+        },
+        { ...GOOD, thought: sc.baddate2 },
+      ],
+    },
+  ];
+  const DESK_GOOD = {
+    thought: S.deskThought,
+    steps: ['open_page', 'open_page', 'calculator', 'draw_pixels'],
+    args: [
+      () => ({ url: `${SITE}/` }),
+      o => ({ url: o[0].output.links.find(l => l.url.endsWith('/pickup')).url }),
+      o => ({ expression: `${priceIn(o[1].output.text)}*3` }),
+      () => ({ art: MUG_ART }),
+    ],
+    judge: o => ({
+      done: true, feedback: '',
+      answer: S.deskAnswer(PRODUCTS[0].name, yen(priceIn(o[1].output.text)), yen(o[2].output.result)),
+    }),
+  };
+  DESK_SCENES = [
+    { id: 'desk', label: ds.desk, query: Q_DESK, attempts: [DESK_GOOD] },
+    {
+      id: 'guess', label: ds.guess, query: Q_DESK,
+      attempts: [
+        {
+          thought: ds.guess1,
+          steps: ['calculator', 'draw_pixels'],
+          args: [() => ({ expression: '1500*3' }), () => ({ art: MUG_ART })],
+          judge: () => ({ done: false, answer: '', feedback: ds.guessFeedback }),
+        },
+        { ...DESK_GOOD, thought: ds.guess2 },
+      ],
+    },
+    {
+      id: 'badurl', label: ds.badurl, query: Q_DESK,
+      attempts: [
+        {
+          thought: ds.badurl1,
+          steps: ['open_page', 'calculator', 'draw_pixels'],
+          args: [() => ({ url: `${SITE}${ds.badurlPath}` })],
+          judge: null,
+        },
+        { ...DESK_GOOD, thought: ds.badurl2 },
+      ],
+    },
+  ];
+  SCENES_BY_STAGE = { 3: SCENES, 4: DESK_SCENES };
+}
+function scriptedBrain(scene) {
+  const att = ctx => scene.attempts[Math.min(ctx.attempt, scene.attempts.length) - 1];
+  return {
+    kind: 'script', badge: T.script.badge,
+    async plan(ctx) { await sleep(250); const a = att(ctx); return { thought: a.thought, steps: a.steps.slice() }; },
+    async args(ctx, idx) { await sleep(200); const f = att(ctx).args[idx]; return f ? f(ctx.outputs) : {}; },
+    async judge(ctx) { await sleep(250); return att(ctx).judge(ctx.outputs); },
+    // 段階 1・2 用。店のデータを見ていない答えは、わざと当て推量にしてある。
+    async answerOnly() { await sleep(250); return T.script.guessAnswer; },
+    async pickTool() { await sleep(250); return { tool: 'fetch_product_info', args: { product_name: PRODUCTS[2].name } }; },
+    async answerWith(ctx) { await sleep(250); const o = ctx.output; return T.script.answerWith(o.product_name, yen(o.price_yen)); },
+  };
+}
+
+/* ---------- 頭脳その2: ブラウザ内のモデル（WebLLM / WebGPU） ---------- */
+const WEBLLM_URL = 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.85/lib/index.js';
+// 表示名は言語ごとの I18N[..].models（同じ順番）
+const MODEL_IDS = [
+  'Qwen3.5-2B-q4f16_1-MLC',
+  'Qwen3.5-0.8B-q4f16_1-MLC',
+  'Qwen3.5-4B-q4f16_1-MLC',
+  'gemma-2-2b-jpn-it-q4f16_1-MLC',
+  'Qwen2.5-1.5B-Instruct-q4f16_1-MLC',
+];
+const llm = { engine: null, modelId: null, loading: false };
+
+const stripThink = t => str(t).replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+function parseLoose(text) {
+  const t = stripThink(text);
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) return null;
+  try { return JSON.parse(t.slice(a, b + 1)); } catch { return null; }
+}
+async function chat(prompt, onToken, schema) {
+  const base = { messages: [{ role: 'user', content: prompt }], temperature: 0.2, max_tokens: 400, stream: true };
+  if (/^Qwen3/.test(llm.modelId)) base.extra_body = { enable_thinking: false };
+  const once = async req => {
+    let text = '';
+    const stream = await llm.engine.chat.completions.create(req);
+    for await (const chunk of stream) {
+      text += chunk.choices?.[0]?.delta?.content || '';
+      if (onToken) onToken(text);
+    }
+    return text;
+  };
+  if (!schema) return once(base);
+  try {
+    // 文法で JSON の形を固定する。対応していない組み合わせなら自由出力に切り替える。
+    return await once({ ...base, response_format: { type: 'json_object', schema: JSON.stringify(schema) } });
+  } catch (e) {
+    console.warn('JSON 指定つきの生成に失敗。自由出力でやり直します', e);
+    return once(base);
+  }
+}
+const chatText = async (prompt, onToken) => stripThink(await chat(prompt, onToken));
+const chatJSON = async (prompt, schema, onToken) => parseLoose(await chat(prompt, onToken, schema));
+const normStep = s => {
+  if (s && typeof s === 'object') s = s.tool || s.name || s.action || '';
+  return str(s).replace(/\(.*$/s, '').replace(/[`"'\s]/g, '');
+};
+function modelBrain() {
+  return {
+    kind: 'model', badge: T.c.modelBadge,
+    async plan(ctx, onTok) {
+      const r = await chatJSON(plannerPrompt(ctx), PLAN_SCHEMA, onTok);
+      const steps = Array.isArray(r?.steps) ? r.steps.map(normStep).filter(Boolean) : [];
+      return { thought: str(r?.thought), steps };
+    },
+    async args(ctx, idx, onTok) {
+      const r = await chatJSON(argsPrompt(ctx, idx), argsSchema(KIT.tools[ctx.plan[idx]]), onTok);
+      return r && typeof r === 'object' && !Array.isArray(r) ? r : {};
+    },
+    async judge(ctx, onTok) {
+      const r = await chatJSON(judgePrompt(ctx), JUDGE_SCHEMA, onTok);
+      if (!r) return { done: false, answer: '', feedback: T.c.judgeUnreadable };
+      const answer = str(r.answer).trim();
+      const done = r.done === true && answer !== '';
+      return { done, answer, feedback: done ? '' : (str(r.feedback).trim() || T.c.judgeNoAnswer) };
+    },
+    answerOnly: (ctx, onTok) => chatText(answerOnlyPrompt(ctx), onTok),
+    async pickTool(ctx, onTok) {
+      const r = await chatJSON(pickPrompt(ctx), PICK_SCHEMA, onTok);
+      const args = r && r.args && typeof r.args === 'object' && !Array.isArray(r.args) ? r.args : {};
+      return { tool: normStep(r?.tool), args };
+    },
+    answerWith: (ctx, onTok) => chatText(answerWithPrompt(ctx), onTok),
+  };
+}
+
+/* ---------- 図 ---------- */
+// 図の下の段の小さい字は言語ごとの I18N[..].nodes（英語では出さない）
+const NODE_META = {
+  query: { en: 'Query', kind: 'input' },
+  planner: { en: 'Planner', kind: 'part' },
+  plan: { en: 'Generated plan', kind: 'data' },
+  evaluator: { en: 'Evaluator', kind: 'part' },
+  executor: { en: 'Executor', kind: 'part' },
+  tools: { en: 'Tools', kind: 'part' },
+  outputs: { en: 'Tool outputs', kind: 'data' },
+  finish: { en: 'Finish', kind: 'part' },
+  model: { en: 'Model', kind: 'part' },
+  answer: { en: 'Answer', kind: 'data' },
+};
+const LAYOUTS = {
+  1: {
+    wide: {
+      vb: [800, 130], fs: [14, 10.5],
+      nodes: { query: [130, 43, 120, 44], model: [340, 39, 120, 52], answer: [550, 43, 120, 44] },
+      edges: { q_m: [[250, 65], [340, 65]], m_a: [[460, 65], [550, 65]] },
+    },
+    tall: {
+      vb: [372, 110], fs: [13, 9.5],
+      nodes: { query: [10, 35, 100, 40], model: [136, 31, 100, 48], answer: [262, 35, 100, 40] },
+      edges: { q_m: [[110, 55], [136, 55]], m_a: [[236, 55], [262, 55]] },
+    },
+  },
+  2: {
+    wide: {
+      vb: [800, 250], fs: [14, 10.5],
+      nodes: {
+        tools: [200, 20, 120, 48], outputs: [480, 22, 130, 44],
+        query: [130, 180, 120, 44], model: [340, 176, 120, 52], answer: [550, 180, 120, 44],
+      },
+      edges: {
+        t_m: [[230, 68], [230, 140], [360, 140], [360, 176]],
+        m_t: [[390, 176], [390, 110], [290, 110], [290, 68]],
+        t_o: [[320, 44], [480, 44]],
+        o_m: [[545, 66], [545, 125], [430, 125], [430, 176]],
+        q_m: [[250, 202], [340, 202]],
+        m_a: [[460, 202], [550, 202]],
+      },
+    },
+    tall: {
+      vb: [372, 246], fs: [13, 9.5],
+      nodes: {
+        tools: [30, 14, 120, 44], outputs: [222, 14, 124, 44],
+        query: [6, 186, 96, 40], model: [136, 180, 100, 52], answer: [270, 186, 96, 40],
+      },
+      edges: {
+        t_m: [[60, 58], [60, 150], [152, 150], [152, 180]],
+        m_t: [[176, 180], [176, 110], [110, 110], [110, 58]],
+        t_o: [[150, 36], [222, 36]],
+        o_m: [[284, 58], [284, 130], [210, 130], [210, 180]],
+        q_m: [[102, 206], [136, 206]],
+        m_a: [[236, 206], [270, 206]],
+      },
+    },
+  },
+  3: {
+    wide: {
+      vb: [800, 360], fs: [14, 10.5],
+      nodes: {
+        query: [4, 255, 84, 38], planner: [114, 252, 102, 44], plan: [242, 252, 116, 44],
+        evaluator: [410, 252, 110, 44], tools: [410, 10, 110, 54], outputs: [410, 128, 110, 44],
+        executor: [572, 128, 110, 44], finish: { cx: 732, cy: 274, rx: 62, ry: 50 },
+      },
+      edges: {
+        t_p: [[410, 37], [165, 37], [165, 252]],
+        q_p: [[88, 274], [114, 274]],
+        p_g: [[216, 274], [242, 274]],
+        g_e: [[358, 274], [410, 274]],
+        e_f: [[520, 274], [670, 274]],
+        e_x: [[520, 274], [627, 274], [627, 172]],
+        e_p: [[520, 274], [627, 274], [627, 346], [165, 346], [165, 296]],
+        x_t: [[627, 128], [627, 37], [520, 37]],
+        x_o: [[572, 150], [520, 150]],
+        t_o: [[465, 64], [465, 128]],
+        o_e: [[465, 172], [465, 252]],
+      },
+    },
+    tall: {
+      vb: [372, 372], fs: [13, 9.5],
+      nodes: {
+        query: [136, 6, 100, 34], planner: [116, 62, 140, 40], plan: [116, 124, 140, 38],
+        evaluator: [116, 186, 140, 40], outputs: [34, 256, 120, 38], executor: [218, 256, 120, 38],
+        tools: [116, 318, 140, 38], finish: { cx: 314, cy: 206, rx: 42, ry: 30 },
+      },
+      edges: {
+        t_p: [[186, 356], [186, 366], [364, 366], [364, 82], [256, 82]],
+        q_p: [[186, 40], [186, 62]],
+        p_g: [[186, 102], [186, 124]],
+        g_e: [[186, 162], [186, 186]],
+        e_f: [[256, 206], [272, 206]],
+        e_x: [[226, 226], [226, 241], [278, 241], [278, 256]],
+        e_p: [[116, 206], [40, 206], [40, 82], [116, 82]],
+        x_t: [[278, 294], [278, 337], [256, 337]],
+        x_o: [[218, 275], [154, 275]],
+        t_o: [[136, 318], [136, 294]],
+        o_e: [[94, 256], [94, 241], [146, 241], [146, 226]],
+      },
+    },
+  },
+};
+// 段階 4 はエージェントの形はそのままで、道具だけを入れ替える
+LAYOUTS[4] = LAYOUTS[3];
+const SVGNS = 'http://www.w3.org/2000/svg';
+const sv = (tag, attrs, ...kids) => {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+  for (const k of kids) el.append(k);
+  return el;
+};
+const diagram = {
+  host: $('#diagram'), layout: null, svg: null, edgeEls: {}, nodeEls: {}, dot: null,
+  current: null, animId: 0,
+  reduce: window.matchMedia('(prefers-reduced-motion: reduce)'),
+  render(name) {
+    this.layout = name;
+    const L = LAYOUTS[state.stage][name];
+    const svg = sv('svg', { viewBox: `0 0 ${L.vb[0]} ${L.vb[1]}`, role: 'img', 'aria-label': T.layouts[state.stage - 1] });
+    const gE = sv('g', {}), gN = sv('g', {});
+    this.edgeEls = {}; this.nodeEls = {};
+    for (const [id, pts] of Object.entries(L.edges)) {
+      const n = pts.length, [x1, y1] = pts[n - 2], [x2, y2] = pts[n - 1];
+      const len = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+      const bx = x2 - ux * 8, by = y2 - uy * 8;
+      const line = pts.slice(0, -1).concat([[x2 - ux * 6, y2 - uy * 6]]);
+      const g = sv('g', { class: 'edge' },
+        sv('path', { d: 'M' + line.map(p => p.join(',')).join(' L') }),
+        sv('polygon', { points: `${x2},${y2} ${bx - uy * 4.5},${by + ux * 4.5} ${bx + uy * 4.5},${by - ux * 4.5}` }));
+      g._full = sv('path', { d: 'M' + pts.map(p => p.join(',')).join(' L') });
+      gE.append(g); this.edgeEls[id] = g;
+    }
+    for (const [id, box] of Object.entries(L.nodes)) {
+      const m = NODE_META[id], subText = T.nodes[id];
+      let shape, cx, cy;
+      if (Array.isArray(box)) {
+        const [x, y, w, hh] = box; cx = x + w / 2; cy = y + hh / 2;
+        shape = sv('rect', { class: 'shape', x, y, width: w, height: hh, rx: 4 });
+      } else {
+        ({ cx, cy } = box);
+        shape = sv('polygon', { class: 'shape', points: `${cx - box.rx},${cy} ${cx},${cy - box.ry} ${cx + box.rx},${cy} ${cx},${cy + box.ry}` });
+      }
+      // 小さい字がない言語では、名前を縦の真ん中に置く
+      const en = sv('text', { class: 'en', x: cx, y: subText ? cy - 1 : cy + L.fs[0] * 0.35, 'font-size': L.fs[0] }); en.textContent = m.en;
+      const g = sv('g', { class: `node n-${id} ${m.kind}` }, shape, en);
+      if (subText) {
+        const sub = sv('text', { class: 'sub', x: cx, y: cy + L.fs[1] + 3, 'font-size': L.fs[1] }); sub.textContent = subText;
+        g.append(sub);
+      }
+      gN.append(g); this.nodeEls[id] = g;
+    }
+    this.dot = sv('circle', { class: 'dot', r: 5.5, cx: -20, cy: -20 });
+    this.dot.style.display = 'none';
+    svg.append(gE, gN, this.dot);
+    this.host.replaceChildren(svg); this.svg = svg; this._gE = gE;
+    if (this.current) this.show(this.current, false);
+  },
+  fit() {
+    const want = this.host.clientWidth < 560 ? 'tall' : 'wide';
+    if (want !== this.layout) this.render(want);
+  },
+  clear() { this.current = null; this.animId++; this.render(this.layout); },
+  show(hl, animate = true) {
+    this.current = hl;
+    const id = ++this.animId;
+    this.svg.style.setProperty('--step', `var(--${hl.role})`);
+    for (const [k, el] of Object.entries(this.nodeEls)) el.classList.toggle('active', hl.nodes.includes(k));
+    for (const [k, el] of Object.entries(this.edgeEls)) {
+      const on = hl.edges.includes(k);
+      el.classList.toggle('active', on);
+      if (on) this._gE.append(el);
+    }
+    if (animate && !this.reduce.matches) this.travel(hl.edges, id);
+  },
+  async travel(edges, id) {
+    const dot = this.dot;
+    for (const e of edges) {
+      const p = this.edgeEls[e]._full, len = p.getTotalLength();
+      const dur = Math.min(900, Math.max(320, len * 2.4));
+      dot.style.display = '';
+      await new Promise(res => {
+        const t0 = performance.now();
+        const f = t => {
+          if (id !== this.animId) return res();
+          const k = Math.min(1, (t - t0) / dur);
+          const ez = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+          const pt = p.getPointAtLength(len * ez);
+          dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y);
+          if (k < 1) requestAnimationFrame(f); else res();
+        };
+        requestAnimationFrame(f);
+      });
+      if (id !== this.animId) return;
+    }
+    await sleep(250);
+    if (id === this.animId) dot.style.display = 'none';
+  },
+};
+
+/* ---------- 作業台: ページの中に置いたブラウザ・電卓・ドット絵キャンバス ---------- */
+// 道具として呼ばれると画面の上で動く。人が手で触ることもできる。
+let PAGES = {};
+const CALC_KEYS = ['C', '(', ')', '/', '7', '8', '9', '*', '4', '5', '6', '-', '1', '2', '3', '+', '0', '.', '⌫', '='];
+const KEY_LABEL = { '/': '÷', '*': '×', '-': '−' };
+const prettyExpr = s => s.replace(/[/*-]/g, c => KEY_LABEL[c]);
+
+const desk = (() => {
+  const box = { open_page: $('#boxBrowser'), calculator: $('#boxCalc'), draw_pixels: $('#boxPixel') };
+  let gen = 0;   // 「最初から」で増やす。動いている途中の道具はこれを見て止まる
+  const wait = async (ms, g) => {
+    if (!diagram.reduce.matches) await sleep(ms);
+    if (g !== gen) throw new Error(T.err.deskReset);
+  };
+  const mark = name => Object.entries(box).forEach(([k, b]) => b.classList.toggle('active', k === name));
+
+  /* ブラウザ */
+  const brUrl = $('#brUrl'), brPage = $('#brPage');
+  function loadPage(u) {
+    let s = str(u).trim();
+    if (!s) throw new Error(T.err.urlRequired);
+    if (!/^[a-z]+:\/\//i.test(s)) s = s.startsWith('shop.example') ? 'https://' + s : `${SITE}/${s.replace(/^\/+/, '')}`;
+    let url;
+    try { url = new URL(s); } catch { throw new Error(T.err.notUrl(str(u))); }
+    if (url.hostname !== 'shop.example') throw new Error(T.err.onlySite);
+    const path = url.pathname.replace(/\/+$/, '') || '/';
+    const page = PAGES[path];
+    if (!page) throw new Error(T.err.page404(SITE + path));
+    return {
+      url: SITE + (path === '/' ? '/' : path), title: page.title, text: page.text.join('\n'),
+      links: page.links.map(([text, p]) => ({ text, url: SITE + (p === '/' ? '/' : p) })),
+    };
+  }
+  function renderPage(page) {
+    brUrl.value = page ? page.url : '';
+    brPage.replaceChildren(...(page
+      ? [h('h3', { text: page.title }), ...page.text.split('\n').map(t => h('p', { text: t })),
+        h('div', { class: 'links' }, page.links.map(l => h('button', { type: 'button', text: l.text, onclick: () => openPage(l.url, gen).catch(() => {}) })))]
+      : [h('p', { class: 'blank', text: T.c.blank })]));
+    brPage.scrollTop = 0;
+  }
+  async function openPage(u, g) {
+    mark('open_page');
+    brUrl.value = str(u);
+    brPage.replaceChildren(h('p', { class: 'blank', text: T.c.loading }));
+    await wait(450, g);
+    try { const page = loadPage(u); renderPage(page); return page; } catch (e) {
+      brPage.replaceChildren(h('p', { class: 'blank', text: e.message }));
+      throw e;
+    }
+  }
+  $('#brForm').addEventListener('submit', e => { e.preventDefault(); openPage(brUrl.value, gen).catch(() => {}); });
+
+  /* 電卓 */
+  const calcExpr = $('#calcExpr'), calcVal = $('#calcVal'), keysEl = $('#calcKeys');
+  let expr = '', shown = '0', done = false, failed = false;
+  const showCalc = () => {
+    calcExpr.textContent = done ? `${prettyExpr(expr)} =` : '';
+    calcVal.textContent = done ? shown : (prettyExpr(expr) || '0');
+  };
+  function press(k) {
+    if (k === 'C') { expr = ''; shown = '0'; done = false; failed = false; }
+    else if (k === '⌫') { if (done) { expr = ''; done = false; } expr = expr.slice(0, -1); }
+    else if (k === '=') {
+      if (!expr) return;
+      try { shown = String(calc(expr)); failed = false; } catch { shown = T.err.calcError; failed = true; }
+      done = true;
+    } else {
+      if (done) { expr = /[+\-*/]/.test(k) && !failed ? shown : ''; done = false; }
+      expr += k;
+    }
+    showCalc();
+  }
+  const keyBtns = {};
+  for (const k of CALC_KEYS) {
+    keyBtns[k] = h('button', { type: 'button', class: /[0-9.]/.test(k) ? null : 'op', text: KEY_LABEL[k] || k, onclick: () => press(k) });
+    keysEl.append(keyBtns[k]);
+  }
+  async function calculate(expression, g) {
+    mark('calculator');
+    const keys = str(expression).replace(/×/g, '*').replace(/÷/g, '/').replace(/[−–ー]/g, '-').replace(/yen/gi, '').replace(/[,，\s円¥엔]/g, '').split('');
+    if (!keys.length) throw new Error(T.err.exprRequired);
+    const bad = keys.find(k => !/[0-9.+\-*/()]/.test(k));
+    if (bad) throw new Error(T.err.noKey(bad));
+    press('C');
+    for (const k of [...keys, '=']) {
+      await wait(110, g);
+      keyBtns[k].classList.add('on'); setTimeout(() => keyBtns[k].classList.remove('on'), 90);
+      press(k);
+    }
+    return { expression: keys.join(''), result: calc(keys.join('')) };   // 式がおかしければここで理由つきのエラーになる
+  }
+
+  /* ドット絵キャンバス */
+  const cv = $('#pixCanvas'), g2 = cv.getContext('2d'), cell = cv.width / PIX;
+  const px = Array(PIX * PIX).fill('.');
+  let color = 'k';
+  function paint() {
+    g2.fillStyle = '#F3F5F8'; g2.fillRect(0, 0, cv.width, cv.height);
+    px.forEach((c, i) => { if (c !== '.') { g2.fillStyle = PAL[c]; g2.fillRect((i % PIX) * cell, Math.floor(i / PIX) * cell, cell, cell); } });
+    g2.strokeStyle = 'rgba(24,33,43,.10)'; g2.lineWidth = 1;
+    g2.beginPath();
+    for (let i = 1; i < PIX; i++) { const v = i * cell + .5; g2.moveTo(v, 0); g2.lineTo(v, cv.height); g2.moveTo(0, v); g2.lineTo(cv.width, v); }
+    g2.stroke();
+  }
+  function parseArt(art) {
+    const s = (Array.isArray(art) ? art.join('/') : str(art)).replace(/\\n/g, '\n').trim();
+    if (!s) throw new Error(T.err.artEmpty);
+    const rows = s.split(/[\/\n]/).map(r => r.replace(/\s+$/, '').replace(/ /g, '.').toLowerCase());
+    while (rows.length && !rows[rows.length - 1]) rows.pop();
+    if (rows.length > PIX) throw new Error(T.err.tooManyRows(rows.length));
+    rows.forEach((r, i) => {
+      if (r.length > PIX) throw new Error(T.err.rowTooLong(i + 1, r.length));
+      const bad = [...r].find(c => !(c in PAL));
+      if (bad) throw new Error(T.err.badChar(i + 1, bad, Object.keys(PAL).join(' ')));
+    });
+    if (!rows.join('').replace(/\./g, '')) throw new Error(T.err.noDots);
+    return rows;
+  }
+  async function draw(art, g) {
+    mark('draw_pixels');
+    const rows = parseArt(art);
+    px.fill('.'); paint();
+    for (let y = 0; y < rows.length; y++) {
+      await wait(45, g);
+      [...rows[y]].forEach((c, x) => { px[y * PIX + x] = c; });
+      paint();
+    }
+    const used = [...new Set(px.filter(c => c !== '.'))];
+    return { size: `${PIX}x${PIX}`, rows: rows.length, filled_pixels: px.filter(c => c !== '.').length, colors: used.map(c => T.pal[c]) };
+  }
+  const at = e => {
+    const r = cv.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / r.width * PIX), y = Math.floor((e.clientY - r.top) / r.height * PIX);
+    return x >= 0 && x < PIX && y >= 0 && y < PIX ? y * PIX + x : -1;
+  };
+  const dab = e => { const i = at(e); if (i >= 0 && px[i] !== color) { px[i] = color; paint(); } };
+  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); dab(e); });
+  cv.addEventListener('pointermove', e => { if (e.buttons) dab(e); });
+  const palEl = $('#palette'), swatches = [];
+  for (const [c, hex] of Object.entries(PAL)) {
+    const b = h('button', { type: 'button', class: hex ? null : 'erase', 'aria-pressed': String(c === color), style: hex ? `--sw:${hex}` : null,
+      onclick: () => { color = c; swatches.forEach(s => s.setAttribute('aria-pressed', String(s === b))); } });
+    b._c = c;
+    swatches.push(b); palEl.append(b);
+  }
+  // 言語を切り替えたときに、色の名前などを付け直す
+  function relabel() {
+    for (const b of swatches) {
+      const name = PAL[b._c] ? T.pal[b._c] : T.ui.eraser;
+      b.title = name; b.setAttribute('aria-label', name);
+    }
+    keyBtns['⌫'].setAttribute('aria-label', T.ui.backspace);
+  }
+
+  function reset() { gen++; mark(null); renderPage(null); press('C'); px.fill('.'); paint(); }
+  return {
+    reset, relabel,
+    openPage: u => openPage(u, gen),
+    calculate: e => calculate(e, gen),
+    draw: a => draw(a, gen),
+  };
+})();
+
+/* ---------- 記録（カード） ---------- */
+const logEl = $('#log'), logHint = $('#logHint');
+const slider = window.matchMedia('(max-width: 959px)');   // 狭い画面ではカードを横に並べる
+let shownCard = null, scrollTimer = 0;
+function showEmpty(text) { shownCard = null; logHint.hidden = true; logEl.replaceChildren(h('p', { class: 'empty', text })); logEl.scrollLeft = 0; }
+// 横スライドで見ているカードに合わせて、図の強調も切り替える
+function syncViewed() {
+  if (!slider.matches || state.run?.busy) return;
+  const x = logEl.getBoundingClientRect().left + 16;
+  let best = null, bd = Infinity;
+  for (const c of logEl.querySelectorAll('.card')) {
+    const d = Math.abs(c.getBoundingClientRect().left - x);
+    if (d < bd) { bd = d; best = c; }
+  }
+  if (best && best !== shownCard && best._hl) { shownCard = best; diagram.show(best._hl, false); }
+}
+logEl.addEventListener('scroll', () => { clearTimeout(scrollTimer); scrollTimer = setTimeout(syncViewed, 140); }, { passive: true });
+function addCard(run, { role, who, title, badge, lead }) {
+  run.stepNo++;
+  const body = h('div', { class: 'body' });
+  const card = h('article', { class: 'card current', style: `--c:var(--${role})` },
+    h('header', null,
+      h('span', { class: 'num', text: run.stepNo }),
+      h('span', { class: 'who', text: who }),
+      h('h2', { text: title }),
+      badge && h('span', { class: 'badge', text: badge })),
+    lead && h('p', { class: 'lead', text: lead }),
+    body);
+  logEl.querySelector('.empty')?.remove();
+  logEl.querySelector('.card.current')?.classList.remove('current');
+  logEl.append(card);
+  card._hl = diagram.current; shownCard = card;
+  logHint.hidden = run.stepNo < 2;
+  if (slider.matches) requestAnimationFrame(() => logEl.scrollTo({ left: logEl.scrollWidth, behavior: diagram.reduce.matches ? 'auto' : 'smooth' }));
+  return body;
+}
+const kv = (label, ...content) => h('div', { class: 'kv' }, h('b', { text: label }), ...content);
+const pre = text => h('pre', { text });
+const promptDetails = text => h('details', null, h('summary', { text: T.c.showPrompt }), pre(text));
+const planList = (steps, bad = []) => h('ol', { class: 'plan' }, steps.map(s => h('li', { class: bad.includes(s) ? 'bad' : null }, h('code', { text: showName(s) }))));
+function liveBox(body, brain) {
+  if (brain.kind !== 'model') return { set() {}, remove() {} };
+  const el = pre(T.c.thinking);
+  body.append(el);
+  return { set: t => { el.textContent = t || T.c.thinking; }, remove: () => el.remove() };
+}
+
+/* ---------- エージェント本体: 図 6-9 の流れをそのまま書いたもの ---------- */
+function validatePlan(steps) {
+  const C = T.c;
+  const unknown = steps.filter(s => !KIT.tools[s]);
+  const checks = [
+    { ok: steps.length > 0, text: C.vNotEmpty },
+    { ok: unknown.length === 0, text: unknown.length ? C.vUnknown([...new Set(unknown)].join(', ')) : C.vKnown },
+    { ok: steps.length <= MAX_STEPS, text: C.vMax(steps.length) },
+  ];
+  const ok = checks.every(c => c.ok);
+  let feedback = '';
+  if (!ok) {
+    const why = [];
+    if (!steps.length) why.push(C.whyEmpty);
+    if (unknown.length) why.push(C.whyUnknown([...new Set(unknown)].join(', '), Object.keys(KIT.tools).join(', ')));
+    if (steps.length > MAX_STEPS) why.push(C.whyMax);
+    feedback = why.join(' ');
+  }
+  return { ok, checks, unknown, feedback };
+}
+function checkArgs(name, args) {
+  const want = Object.keys(KIT.tools[name].params);
+  const missing = want.filter(k => args[k] === undefined || args[k] === null || args[k] === '');
+  const extra = Object.keys(args).filter(k => !want.includes(k));
+  if (missing.length) return T.err.missingArgs(missing.join(', '));
+  if (extra.length) return T.err.extraArgs(extra.join(', '));
+  return null;
+}
+
+const truthNote = query => {
+  const p = PRODUCTS.find(x => query.includes(x.name));
+  return p ? T.c.truth(p.name, yen(p.price)) : null;
+};
+const nextStageBtn = n => h('button', { type: 'button', class: 'btn', text: T.c.nextStage(n, T.ui.stageNames[n - 1]), onclick: () => setStage(n) });
+
+/* 段階 1: 答えの文を作るだけ */
+async function* answerOnlyRun(run) {
+  const { brain, ctx } = run, C = T.c;
+  diagram.show({ role: 'planner', nodes: ['query', 'model'], edges: ['q_m'] });
+  addCard(run, { role: 'ink', who: 'Query', title: C.s1QueryTitle, lead: C.s1QueryLead })
+    .append(h('p', { class: 'answer', text: ctx.query }));
+  yield;
+
+  diagram.show({ role: 'planner', nodes: ['model', 'answer'], edges: ['m_a'] });
+  const body = addCard(run, { role: 'planner', who: 'Model', title: C.s1ModelTitle, badge: brain.badge, lead: C.s1ModelLead });
+  const live = liveBox(body, brain);
+  const prompt = answerOnlyPrompt(ctx);
+  const text = await brain.answerOnly(ctx, live.set);
+  if (run !== state.run) return;
+  live.remove();
+  const truth = truthNote(ctx.query);
+  put(body,
+    kv(C.answer, h('p', { class: 'answer', text: text || C.noAnswer })),
+    truth && kv(C.truthCheck, h('p', { text: truth })),
+    promptDetails(prompt),
+    h('p', { class: 'lead', text: C.s1Next }),
+    nextStageBtn(2));
+}
+
+/* 段階 2: 道具を1回呼び、出力を読んで答える */
+async function* toolUseRun(run) {
+  const { brain, ctx } = run, C = T.c;
+  const alive = () => run === state.run;
+
+  diagram.show({ role: 'tools', nodes: ['query', 'tools', 'model'], edges: ['q_m', 't_m'] });
+  put(addCard(run, { role: 'ink', who: 'Query', title: C.s2QueryTitle, lead: C.s2QueryLead }),
+    h('p', { class: 'answer', text: ctx.query }), kv(C.toolList, toolList()));
+  yield;
+
+  diagram.show({ role: 'planner', nodes: ['model', 'tools'], edges: ['m_t'] });
+  let body = addCard(run, { role: 'planner', who: 'Model', title: C.s2PickTitle, badge: brain.badge, lead: C.s2PickLead });
+  let live = liveBox(body, brain);
+  const pPrompt = pickPrompt(ctx);
+  ctx.call = await brain.pickTool(ctx, live.set);
+  if (!alive()) return;
+  live.remove();
+  put(body, kv(C.call, pre(showCall(ctx.call.tool || C.empty, ctx.call.args))), promptDetails(pPrompt));
+  yield;
+
+  diagram.show({ role: 'tools', nodes: ['tools', 'outputs'], edges: ['t_o'] });
+  const { tool, args } = ctx.call;
+  if (!KIT.tools[tool]) ctx.output = { error: T.err.noTool(tool || C.empty) };
+  else {
+    const bad = checkArgs(tool, args);
+    if (bad) ctx.output = { error: bad };
+    else { try { ctx.output = await KIT.tools[tool].run(args); } catch (e) { ctx.output = { error: e.message }; } }
+  }
+  if (!alive()) return;
+  put(addCard(run, { role: 'tools', who: 'Tools', title: C.s2RunTitle, badge: C.codeRun, lead: C.s2RunLead }),
+    kv(ctx.output.error ? C.outputErr : C.output, pre(fmtOut(ctx.output))));
+  yield;
+
+  diagram.show({ role: 'planner', nodes: ['outputs', 'model', 'answer'], edges: ['o_m', 'm_a'] });
+  body = addCard(run, { role: 'planner', who: 'Model', title: C.s2AnswerTitle, badge: brain.badge, lead: C.s2AnswerLead });
+  live = liveBox(body, brain);
+  const aPrompt = answerWithPrompt(ctx);
+  const text = ctx.output.error && brain.kind === 'script'
+    ? C.s2ToolErr
+    : await brain.answerWith(ctx, live.set);
+  if (!alive()) return;
+  live.remove();
+  put(body,
+    kv(C.answer, h('p', { class: 'answer', text: text || C.noAnswer })),
+    promptDetails(aPrompt),
+    h('p', { class: 'lead', text: C.s2Next(Q_MAIN) }),
+    nextStageBtn(3));
+}
+
+/* 段階 3 */
+async function* agentRun(run) {
+  const { brain, ctx } = run, C = T.c;
+  const alive = () => run === state.run;
+
+  diagram.show({ role: 'planner', nodes: ['query', 'planner'], edges: ['q_p'] });
+  addCard(run, { role: 'ink', who: 'Query', title: C.s1QueryTitle, lead: C.s3QueryLead })
+    .append(h('p', { class: 'answer', text: ctx.query }));
+  yield;
+
+  diagram.show({ role: 'tools', nodes: ['tools', 'planner'], edges: ['t_p'] });
+  addCard(run, { role: 'tools', who: 'Tools', title: C.s3ToolsTitle, lead: KIT.toolsLead })
+    .append(toolList());
+  yield;
+
+  for (ctx.attempt = 1; ctx.attempt <= MAX_ATTEMPTS; ctx.attempt++) {
+    const last = ctx.attempt === MAX_ATTEMPTS;
+    ctx.plan = []; ctx.outputs = [];
+
+    /* 1. 計画を作る */
+    diagram.show({ role: 'planner', nodes: ['planner', 'plan'], edges: ['p_g'] });
+    let body = addCard(run, {
+      role: 'planner', who: 'Planner', badge: brain.badge,
+      title: ctx.attempt === 1 ? C.planTitle : C.replanTitle(ctx.attempt),
+      lead: ctx.attempt === 1 ? C.planLead : C.replanLead,
+    });
+    let live = liveBox(body, brain);
+    const prompt = plannerPrompt(ctx);
+    run.stats.model++;
+    const p = await brain.plan(ctx, live.set);
+    if (!alive()) return;
+    live.remove();
+    ctx.plan = p.steps;
+    if (p.thought) body.append(kv(C.thought, h('p', { text: p.thought })));
+    body.append(kv(C.plan, p.steps.length ? planList(p.steps) : h('p', { text: C.noPlan })), promptDetails(prompt));
+    yield;
+
+    /* 2. 計画を点検する（実行の前） */
+    diagram.show({ role: 'evaluator', nodes: ['plan', 'evaluator'], edges: ['g_e'] });
+    const v = validatePlan(ctx.plan);
+    body = addCard(run, { role: 'evaluator', who: 'Evaluator', title: C.checkTitle, badge: C.codeJudge, lead: C.checkLead });
+    put(body,
+      h('ul', { class: 'checks' }, v.checks.map(c => h('li', { class: c.ok ? null : 'ng', text: c.text }))),
+      v.unknown.length ? kv(C.plan, planList(ctx.plan, v.unknown)) : null,
+      h('p', { class: 'verdict ' + (v.ok ? 'ok' : 'ng'), text: v.ok ? C.checkOk : C.checkNg }));
+    yield;
+
+    let feedback = v.feedback;
+    if (v.ok) {
+      diagram.show({ role: 'executor', nodes: ['evaluator', 'executor'], edges: ['e_x'] });
+      addCard(run, { role: 'executor', who: 'Executor', title: C.recvTitle, lead: C.recvLead })
+        .append(planList(ctx.plan));
+      yield;
+
+      /* 3. 計画を実行する */
+      let failed = null;
+      for (let i = 0; i < ctx.plan.length; i++) {
+        const name = ctx.plan[i], tool = KIT.tools[name];
+        const needsArgs = Object.keys(tool.params).length > 0;
+        diagram.show({ role: 'executor', nodes: ['executor', 'tools'], edges: ['x_t'] }, false);
+        body = addCard(run, {
+          role: 'executor', who: 'Executor', badge: needsArgs ? brain.badge : C.codeRun,
+          title: C.callTitle(i + 1, ctx.plan.length),
+          lead: (needsArgs ? (i === 0 ? C.callFirst : C.callNext) : C.callNoArgs) + KIT.runNote,
+        });
+        let args = {}, aPrompt = null;
+        if (needsArgs) {
+          live = liveBox(body, brain);
+          aPrompt = argsPrompt(ctx, i);
+          run.stats.model++;
+          args = await brain.args(ctx, i, live.set);
+          if (!alive()) return;
+          live.remove();
+        }
+        const bad = checkArgs(name, args);
+        let output;
+        if (bad) {
+          output = { error: bad };
+          diagram.show({ role: 'executor', nodes: ['executor', 'outputs'], edges: ['x_o'] });
+          body.parentElement._hl = diagram.current;
+        } else {
+          run.stats.tool++;
+          try { output = await tool.run(args); } catch (e) { output = { error: e.message }; }
+          if (!alive()) return;
+          diagram.show({ role: 'executor', nodes: ['executor', 'tools', 'outputs'], edges: ['x_t', 't_o'] });
+          body.parentElement._hl = diagram.current;
+        }
+        ctx.outputs.push({ tool: name, args, output });
+        put(body, kv(C.call, pre(showCall(name, args))), kv(output.error ? C.outputErr : C.output, pre(fmtOut(output))), aPrompt && promptDetails(aPrompt));
+        if (output.error) { failed = { i, name, msg: output.error }; }
+        yield;
+        if (failed) break;
+      }
+
+      /* 4. 結果を確かめる */
+      diagram.show({ role: 'evaluator', nodes: ['outputs', 'evaluator'], edges: ['o_e'] });
+      if (failed) {
+        feedback = C.stepError(failed.i + 1, failed.name, failed.msg);
+        body = addCard(run, { role: 'evaluator', who: 'Evaluator', title: C.resultTitle, badge: C.codeJudge, lead: C.resultErrLead });
+        body.append(h('p', { class: 'verdict ng', text: C.notYet }), kv(C.reason, h('p', { text: feedback })));
+      } else {
+        body = addCard(run, { role: 'evaluator', who: 'Evaluator', title: C.resultTitle, badge: brain.badge, lead: C.resultLead });
+        live = liveBox(body, brain);
+        const jPrompt = judgePrompt(ctx);
+        run.stats.model++;
+        const j = await brain.judge(ctx, live.set);
+        if (!alive()) return;
+        live.remove();
+        if (j.done) {
+          body.append(h('p', { class: 'verdict ok', text: C.canAnswer }), kv(C.draft, h('p', { text: j.answer })), promptDetails(jPrompt));
+          yield;
+          diagram.show({ role: 'finish', nodes: ['evaluator', 'finish'], edges: ['e_f'] });
+          put(addCard(run, { role: 'finish', who: 'Finish', title: C.finishTitle }),
+            h('p', { class: 'answer', text: j.answer }),
+            h('p', { class: 'stats', text: statsText(run) }),
+            state.stage === 3 && h('p', { class: 'lead', text: C.s3Next }),
+            state.stage === 3 && nextStageBtn(4));
+          return;
+        }
+        feedback = j.feedback;
+        body.append(h('p', { class: 'verdict ng', text: C.notYet }), kv(C.reason, h('p', { text: feedback })), promptDetails(jPrompt));
+      }
+      yield;
+    }
+
+    /* 5. 差し戻す（または打ち切る） */
+    ctx.history.push({ plan: ctx.plan, feedback });
+    if (last) break;
+    diagram.show({ role: 'evaluator', nodes: ['evaluator', 'planner'], edges: ['e_p'] });
+    addCard(run, { role: 'evaluator', who: 'Evaluator', title: C.backTitle, lead: C.backLead })
+      .append(kv(C.reasonSent, h('p', { text: feedback })));
+    yield;
+  }
+
+  diagram.show({ role: 'error', nodes: ['evaluator', 'finish'], edges: ['e_f'] });
+  addCard(run, { role: 'error', who: 'Finish', title: C.stopTitle, lead: C.stopLead })
+    .append(h('p', { class: 'answer', text: C.noFinal }), h('p', { class: 'stats', text: statsText(run) }));
+}
+const statsText = run => T.c.stats(run.ctx.attempt, run.stats.tool, run.stats.model, run.brain.kind === 'script');
+
+/* ---------- 画面の状態と操作 ---------- */
+const state = { stage: 1, mode: 'script', sceneIdx: { 3: 0, 4: 0 }, run: null, auto: false };
+const curScene = () => SCENES_BY_STAGE[state.stage]?.[state.sceneIdx[state.stage]] || SCENES[0];
+const el = {
+  next: $('#nextBtn'), auto: $('#autoBtn'), reset: $('#resetBtn'),
+  modeScript: $('#modeScript'), modeModel: $('#modeModel'),
+  scriptBox: $('#scriptBox'), modelBox: $('#modelBox'),
+  sceneSel: $('#sceneSel'), sceneField: $('#sceneField'), modelField: $('#modelField'), stage: $('.stage'), sceneQuery: $('#sceneQuery'),
+  modelSel: $('#modelSel'), loadBtn: $('#loadBtn'), loadBar: $('#loadBar'), status: $('#modelStatus'),
+  query: $('#queryInput'), chips: $('#chips'),
+  stageBtns: [...document.querySelectorAll('.stages button')],
+  langBtns: [...document.querySelectorAll('[data-lang]')],
+  desk: $('#desk'), footer: $('#footerText'),
+};
+const modelReady = () => llm.engine && llm.modelId === el.modelSel.value;
+const currentQuery = () => (state.mode !== 'script' ? el.query.value.trim() : state.stage >= 3 ? curScene().query : Q_SIMPLE);
+
+function newRun() {
+  const run = {
+    brain: state.mode === 'script' ? scriptedBrain(curScene()) : modelBrain(),
+    ctx: { query: currentQuery(), attempt: 1, plan: [], outputs: [], history: [] },
+    stats: { tool: 0, model: 0 }, stepNo: 0, busy: false, finished: false, gen: null,
+  };
+  run.gen = [answerOnlyRun, toolUseRun, agentRun, agentRun][state.stage - 1](run);
+  return run;
+}
+function reset() {
+  state.auto = false;
+  if (state.run?.busy && llm.engine) { try { llm.engine.interruptGenerate(); } catch {} }
+  state.run = null;
+  desk.reset();
+  diagram.clear();
+  showEmpty(state.mode === 'model' && !modelReady()
+    ? T.c.needModel
+    : T.c.pressNext(T.stageDesc[state.stage - 1], state.stage >= 3));
+  syncControls();
+}
+function syncControls() {
+  const r = state.run;
+  const blocked = state.mode === 'model' && (!modelReady() || !currentQuery());
+  el.next.disabled = !!(r?.busy || r?.finished || blocked);
+  el.auto.disabled = !!(r?.finished || blocked);
+  el.auto.textContent = state.auto ? T.ui.stop : T.ui.auto;
+  el.auto.setAttribute('aria-pressed', String(state.auto));
+  el.next.classList.toggle('primary', !r?.finished);
+  el.reset.classList.toggle('primary', !!r?.finished);
+}
+async function nextStep() {
+  if (!state.run) {
+    state.run = newRun();
+    if (diagram.layout === 'tall' && Math.abs(el.stage.getBoundingClientRect().top - 8) > 16) {
+      window.scrollTo({ top: window.scrollY + el.stage.getBoundingClientRect().top - 8, behavior: diagram.reduce.matches ? 'auto' : 'smooth' });
+    }
+  }
+  const run = state.run;
+  if (run.busy || run.finished) return;
+  run.busy = true; syncControls();
+  try {
+    const r = await run.gen.next();
+    if (r.done) run.finished = true;
+  } catch (e) {
+    console.error(e);
+    if (run === state.run) {
+      run.finished = true;
+      addCard(run, { role: 'error', who: T.c.errWho, title: T.c.errTitle, lead: T.c.errLead })
+        .append(pre(str(e?.message || e)));
+    }
+  }
+  run.busy = false;
+  if (run === state.run) syncControls();
+}
+async function autoLoop() {
+  while (state.auto && !(state.run?.finished)) {
+    await nextStep();
+    if (state.run?.finished) break;
+    await sleep(1500);
+  }
+  state.auto = false; syncControls();
+}
+function syncSetup() {
+  const { mode, stage } = state;
+  el.stageBtns.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.stage === stage)));
+  el.modeScript.setAttribute('aria-pressed', String(mode === 'script'));
+  el.modeModel.setAttribute('aria-pressed', String(mode === 'model'));
+  el.scriptBox.hidden = mode !== 'script';
+  el.sceneField.hidden = !(mode === 'script' && stage >= 3);
+  el.desk.hidden = stage !== 4;
+  el.modelBox.hidden = el.modelField.hidden = el.loadBtn.hidden = mode !== 'model';
+  el.sceneQuery.textContent = currentQuery();
+}
+function setMode(mode) {
+  state.mode = mode;
+  syncSetup();
+  if (mode === 'model') describeModelState();
+  reset();
+}
+function setStage(n) {
+  state.stage = n;
+  KIT = n === 4 ? KITS.desk : KITS.shop;
+  el.query.value = n === 4 ? Q_DESK : n === 3 ? Q_MAIN : Q_SIMPLE;
+  const chips = n === 4 ? [Q_DESK, ...T.script.chipDesk] : [Q_SIMPLE, Q_MAIN, ...T.script.chipShop];
+  el.chips.replaceChildren(...chips.map(q =>
+    h('button', { type: 'button', text: q, onclick: () => { el.query.value = q; reset(); } })));
+  el.sceneSel.replaceChildren(...(SCENES_BY_STAGE[n] || []).map((s, i) => h('option', { value: i, text: `${i + 1}. ${s.label}` })));
+  el.sceneSel.value = state.sceneIdx[n] ?? 0;
+  syncSetup();
+  reset();
+}
+function setStatus(text, cls) { el.status.textContent = text; el.status.className = 'status' + (cls ? ' ' + cls : ''); }
+function describeModelState() {
+  if (llm.loading) return;
+  if (modelReady()) setStatus(T.c.ready, 'ok');
+  else if (!navigator.gpu) setStatus(T.c.noGpu, 'err');
+  else setStatus(T.c.firstLoad);
+}
+async function loadModel() {
+  if (llm.loading) return;
+  if (!navigator.gpu) { describeModelState(); return; }
+  const id = el.modelSel.value;
+  llm.loading = true; el.loadBtn.disabled = true; el.modelSel.disabled = true;
+  el.loadBar.hidden = false; el.loadBar.firstElementChild.style.width = '0%';
+  setStatus(T.c.fetchLib);
+  try {
+    const webllm = await import(WEBLLM_URL);
+    if (llm.engine) { try { await llm.engine.unload(); } catch {} llm.engine = null; }
+    const engine = await webllm.CreateMLCEngine(id, {
+      initProgressCallback: r => {
+        el.loadBar.firstElementChild.style.width = Math.round((r.progress || 0) * 100) + '%';
+        setStatus(T.c.progress(Math.round((r.progress || 0) * 100), r.text || ''));
+      },
+    });
+    llm.engine = engine; llm.modelId = id;
+    llm.loading = false;
+    describeModelState();
+  } catch (e) {
+    console.error(e);
+    llm.loading = false;
+    setStatus(T.c.loadFail(str(e?.message || e).slice(0, 160)), 'err');
+  }
+  el.loadBar.hidden = true; el.loadBtn.disabled = false; el.modelSel.disabled = false;
+  if (state.mode === 'model') reset();
+}
+
+/* ---------- 言語の切り替え ---------- */
+const LANG_KEY = 'learn-agentic-lang';
+// 言語ごとにページを分けてある（/ が日本語、/en/ と /ko/）。SNS のサムネイルや題名はページごとに違う
+const PAGE_LANG = document.documentElement.dataset.pageLang || 'ja';
+const ROOT = document.documentElement.dataset.root || './';
+function pickLang() {
+  const ok = l => (l && Object.hasOwn(I18N, l) ? l : null);
+  let saved = null;
+  try { saved = localStorage.getItem(LANG_KEY); } catch {}
+  const nav = (navigator.languages || [navigator.language || '']).map(l => str(l).slice(0, 2).toLowerCase()).find(l => I18N[l]);
+  // /en/ と /ko/ はその言語で開く。/ だけは前に選んだ言語やブラウザの設定に合わせる
+  return ok(new URLSearchParams(location.search).get('lang')) || (PAGE_LANG !== 'ja' ? PAGE_LANG : null) || ok(saved) || nav || 'ja';
+}
+// その言語のページの URL。アドレス欄をこれにしておけば、コピーして共有したときにその言語のサムネイルが出る
+function langUrl(lang) {
+  const u = new URL(location.href);
+  u.searchParams.delete('lang');
+  if (u.protocol === 'file:') { if (lang !== PAGE_LANG) u.searchParams.set('lang', lang); return u; }
+  const to = new URL(ROOT + (lang === 'ja' ? '' : lang + '/'), u);
+  to.search = u.search; to.hash = u.hash;
+  return to;
+}
+function applyStatic() {
+  document.documentElement.lang = T.htmlLang;
+  document.title = T.ui.title;
+  document.querySelectorAll('[data-i18n]').forEach(e => { e.textContent = T.ui[e.dataset.i18n]; });
+  document.querySelectorAll('[data-i18n-aria]').forEach(e => e.setAttribute('aria-label', T.ui[e.dataset.i18nAria]));
+  el.footer.innerHTML = T.ui.footer;   // リンクを含む固定の文言
+  el.stageBtns.forEach(b => {
+    const n = +b.dataset.stage;
+    b.replaceChildren(h('small', { text: T.ui.stageNo(n) }), T.ui.stageNames[n - 1]);
+  });
+  el.langBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === LANG)));
+  const sel = el.modelSel.value || MODEL_IDS[0];
+  el.modelSel.replaceChildren(...MODEL_IDS.map((id, i) => h('option', { value: id, text: T.models[i] })));
+  el.modelSel.value = sel;
+}
+function setLang(lang, save = true) {
+  LANG = lang; T = I18N[lang];
+  PRODUCTS = PRODUCT_DATA.map((p, i) => ({ ...p, name: T.products[i][0], category: T.products[i][1] }));
+  PAGES = T.pages(PRODUCTS, yen);
+  buildTools();
+  buildScenes();
+  applyStatic();
+  desk.relabel();
+  if (save) { try { localStorage.setItem(LANG_KEY, lang); } catch {} }
+  try { history.replaceState(null, '', langUrl(lang)); } catch {}
+  if (state.mode === 'model') describeModelState();
+  setStage(state.stage);   // 図・質問・場面を新しい言語で作り直し、最初から
+}
+
+/* ---------- 初期化 ---------- */
+el.next.addEventListener('click', nextStep);
+el.auto.addEventListener('click', () => { state.auto = !state.auto; syncControls(); if (state.auto) autoLoop(); });
+el.reset.addEventListener('click', reset);
+el.modeScript.addEventListener('click', () => setMode('script'));
+el.modeModel.addEventListener('click', () => setMode('model'));
+el.sceneSel.addEventListener('change', () => { state.sceneIdx[state.stage] = +el.sceneSel.value; syncSetup(); reset(); });
+el.stageBtns.forEach(b => b.addEventListener('click', () => setStage(+b.dataset.stage)));
+el.langBtns.forEach(b => b.addEventListener('click', () => { if (b.dataset.lang !== LANG) setLang(b.dataset.lang); }));
+el.modelSel.addEventListener('change', () => { describeModelState(); reset(); });
+el.loadBtn.addEventListener('click', loadModel);
+el.query.addEventListener('input', reset);
+document.addEventListener('keydown', e => {
+  if (e.key !== 'ArrowRight' || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName || '')) return;
+  if (!el.next.disabled) { e.preventDefault(); nextStep(); }
+});
+
+diagram.layout = diagram.host.clientWidth < 560 ? 'tall' : 'wide';
+setLang(pickLang(), false);
+new ResizeObserver(() => diagram.fit()).observe(diagram.host);
+
+// テスト用の窓口（動作には不要）
+window.__demo = {
+  get TOOLS() { return KIT.tools; }, get KITS() { return KITS; }, get SCENES() { return SCENES; }, get DESK_SCENES() { return DESK_SCENES; },
+  get lang() { return LANG; }, I18N, state, nextStep, setStage, setLang, validatePlan, parseLoose, normStep, calc, desk,
+};
+})();
+</script>
+</body>
+</html>
