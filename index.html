@@ -262,6 +262,9 @@ ul.tools span{font-size:13px;color:var(--muted)}
 .slot-bg{fill:transparent;stroke:transparent;stroke-width:2.5;transition:fill .2s,stroke .2s}
 .slot.on .slot-bg{fill:color-mix(in srgb,var(--step) 16%,transparent);stroke:var(--step)}
 .slot.taken .a-emoji{opacity:.2}
+.st.empty .prop{stroke-dasharray:6 5}
+.a-none{fill:var(--muted);font:500 15px var(--sans);text-anchor:middle}
+.flag.plain polygon{fill:var(--planner)}
 .paper{fill:var(--surface);stroke:var(--tools);stroke-width:1.5}
 .paper.err{stroke:var(--error);fill:color-mix(in srgb,var(--error) 14%,var(--surface))}
 .pole{stroke:var(--ink);stroke-width:3;stroke-linecap:round}
@@ -307,6 +310,7 @@ ul.tools span{font-size:13px;color:var(--muted)}
 .arena-play b{flex:none;display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--paper);color:var(--ink);font-size:15px}
 .arena-play small{display:block;font-weight:400;font-size:12px;opacity:.8}
 .arena-play:hover{transform:translate(-50%,-50%) scale(1.03)}
+@media (max-width:560px){.arena-play{top:40%;width:max-content;max-width:calc(100% - 32px);padding:8px 16px 8px 8px;font-size:15px;border-radius:999px}.arena-play b{width:34px;height:34px}.arena-play small{display:none}}
 @media (prefers-reduced-motion:reduce){.arena *{animation:none !important}.bubble{animation:none}}
 
 footer{margin-top:28px;font-size:13px;color:var(--muted)}
@@ -361,7 +365,7 @@ footer a{color:inherit}
 
   <div class="stage">
     <div class="left">
-      <div class="arena" id="arena" hidden>
+      <div class="arena" id="arena">
         <div class="arena-scroll" id="arenaScroll">
           <div class="arena-box" id="arenaBox"><div class="bubble" id="arenaBubble" hidden></div></div>
         </div>
@@ -694,6 +698,10 @@ ${inv}
       recv: '計画を受け取った。順に道具を使う。', pick: '引数を決めて呼ぶ…',
       judging: 'この出力で答えられるかな…', replan: '計画を立て直そう。', stop: 'ここで打ち切ります。',
       attempt: n => `${n}回目`,
+      // 段階 1・2（エージェントになる前のモデル）で使う
+      st2: { planner: 'モデルの机', finish: '答え' }, noTools: '道具はまだない',
+      waitTool: '道具を動かすのはプログラム。結果を待つ…', readOut: '出力を読もう。',
+      play2: '動かして見る', playNote2: '質問を受け取ったモデルの動きを見ます',
     },
     c: {
       blank: 'まだ何も開いていません。', loading: '読み込み中…',
@@ -1002,6 +1010,9 @@ Tool output: ${output}`,
       recv: 'Got the plan. Calling the tools in order.', pick: 'Deciding the arguments…',
       judging: 'Can I answer with these outputs?', replan: 'I will make a new plan.', stop: 'I will stop here.',
       attempt: n => `Try ${n}`,
+      st2: { planner: 'Model desk', finish: 'Answer' }, noTools: 'No tools yet',
+      waitTool: 'A program runs the tool. Waiting for the result…', readOut: 'Let me read the output.',
+      play2: 'Watch it run', playNote2: 'See what the model does with the question',
     },
     c: {
       blank: 'Nothing has been opened yet.', loading: 'Loading…',
@@ -1310,6 +1321,9 @@ ${inv}
       recv: '계획을 받았다. 차례로 도구를 쓴다.', pick: '인수를 정해서 호출…',
       judging: '이 출력으로 답할 수 있을까…', replan: '계획을 다시 세우자.', stop: '여기서 멈춥니다.',
       attempt: n => `${n}번째`,
+      st2: { planner: '모델 책상', finish: '답' }, noTools: '아직 도구가 없다',
+      waitTool: '도구를 움직이는 건 프로그램. 결과를 기다린다…', readOut: '출력을 읽자.',
+      play2: '움직여서 보기', playNote2: '질문을 받은 모델의 움직임을 봅니다',
     },
     c: {
       blank: '아직 아무것도 열지 않았습니다.', loading: '불러오는 중…',
@@ -1955,21 +1969,24 @@ const arena = (() => {
       sv('rect', { class: 'prop', x: x1 + w - 18, y: 336, width: 8, height: 44 }),
       txt({ class: 'a-emoji', x: ex, y: 316, 'font-size': 24 }, emoji)];
 
+    const S = state.stage, agent = S >= 3;
     station('query', sv('rect', { class: 'prop', x: 34, y: 244, width: 62, height: 136, rx: 6 }),
       sv('circle', { class: 'knob', cx: 84, cy: 316, r: 3.5 }), label(65, A.st.query));
     // 計画ボード（壁）
     notes = sv('g', { class: 'notes' }); stamp = sv('g', { class: 'stamp', transform: 'translate(296,228) rotate(-14)' });
     sub = txt({ class: 'a-sub', x: 326, y: 60 }, '');
-    station('board', sv('rect', { class: 'prop', x: 140, y: 34, width: 200, height: 236, rx: 8 }),
+    // 計画ボード・点検台・作業台はエージェント（段階 3・4）にしかない
+    if (agent) station('board', sv('rect', { class: 'prop', x: 140, y: 34, width: 200, height: 236, rx: 8 }),
       txt({ class: 'a-title', x: 154, y: 60 }, A.st.board), sub, notes, stamp);
-    station('planner', ...table(176, 128, '📝', 280), label(240, A.st.planner));
-    station('evaluator', ...table(388, 88, '🔍', 456), label(430, A.st.evaluator));
+    station('planner', ...table(176, 128, '📝', 280), label(240, agent ? A.st.planner : A.st2.planner));
+    if (agent) station('evaluator', ...table(388, 88, '🔍', 456), label(430, A.st.evaluator));
     // 道具の棚（壁）
-    const names = Object.keys(KIT.tools), sx = 482, sw = 236;
+    const names = S === 1 ? [] : Object.keys(KIT.tools), sx = 482, sw = 236;
     const shelf = station('shelf', sv('rect', { class: 'prop', x: sx, y: 34, width: sw, height: 124, rx: 8 }),
       txt({ class: 'a-title', x: sx + 14, y: 60 }, A.st.shelf),
       sv('line', { class: 'a-base', x1: sx + 10, y1: 140, x2: sx + sw - 10, y2: 140 }));
     slots = {};
+    if (!names.length) { shelf.classList.add('empty'); shelf.append(txt({ class: 'a-none', x: sx + sw / 2, y: 112 }, A.noTools)); }
     names.forEach((n, i) => {
       const cx = sx + sw * (i + 0.5) / names.length, t = sv('title');
       t.textContent = n;
@@ -1977,12 +1994,12 @@ const arena = (() => {
         txt({ class: 'a-emoji', x: cx, y: 121, 'font-size': 30 }, em(n)), t);
       shelf.append(g); slots[n] = g;
     });
-    station('executor', ...table(700, 120, '🛠️', 796), label(760, A.st.executor));
+    if (agent) station('executor', ...table(700, 120, '🛠️', 796), label(760, A.st.executor));
     papers = sv('g'); nPapers = 0;
-    station('tray', sv('rect', { class: 'prop', x: 738, y: 196, width: 112, height: 46, rx: 6 }),
+    if (S >= 2) station('tray', sv('rect', { class: 'prop', x: 738, y: 196, width: 112, height: 46, rx: 6 }),
       txt({ class: 'a-title', x: 742, y: 186 }, A.st.tray), papers);
     flag = sv('g', { class: 'flag' }, sv('polygon', { points: '906,214 952,229 906,244' }));
-    station('finish', sv('line', { class: 'pole', x1: 905, y1: 212, x2: 905, y2: FLOOR }), flag, label(905, A.st.finish));
+    station('finish', sv('line', { class: 'pole', x1: 905, y1: 212, x2: 905, y2: FLOOR }), flag, label(905, agent ? A.st.finish : A.st2.finish));
 
     // アバター（足もとが原点）
     face = sv('g'); tag = txt({ class: 'av-tag', x: 0, y: 22 }, 'Agent');
@@ -2002,16 +2019,16 @@ const arena = (() => {
     av = sv('g', { class: 'avatar' }, sv('ellipse', { class: 'av-shadow', cx: 0, cy: 2, rx: 30, ry: 6 }), flip, item, tag);
     svg.append(av);
     box.replaceChildren(svg, bubble);
-    playBtn.replaceChildren(h('b', { text: '▶' }), h('span', null, A.play, h('small', { text: A.playNote })));
+    playBtn.replaceChildren(h('b', { text: '▶' }), h('span', null, agent ? A.play : A.play2, h('small', { text: agent ? A.playNote : A.playNote2 })));
   }
 
   /* 見た目を変える小さな操作 */
   const place = nx => { x = nx; av.setAttribute('transform', `translate(${x.toFixed(1)},${FLOOR})`); };
   const face_ = d => { dir = d; flip.setAttribute('transform', d < 0 ? 'scale(-1,1)' : ''); item.setAttribute('x', 46 * d); };
-  function setRole(role) {
+  function setRole(role, name) {
     svg.style.setProperty('--step', `var(--${role})`);
     bubble.style.setProperty('--bc', `var(--${role})`);
-    tag.textContent = TAG[role] || 'Agent';
+    tag.textContent = name || (state.stage < 3 ? 'Model' : TAG[role] || 'Agent');
   }
   function setMood(m = 'normal') {
     av.classList.remove('think', 'happy', 'sad', 'work', 'surprise');
@@ -2147,7 +2164,10 @@ const arena = (() => {
       papers.append(sv('rect', { class: 'paper' + (err ? ' err' : ''), x: 748 + k * 13, y: 204, width: 20, height: 30, rx: 2, transform: `rotate(${(k % 2 ? 4 : -4)} ${758 + k * 13} 219)` }));
     },
     clearPapers() { papers.replaceChildren(); nPapers = 0; },
-    flag(ok) { flag.setAttribute('class', 'flag ' + (ok ? 'up ok' : 'ng')); },
+    // ok: 確かめた答え / 'plain': 確かめていない答え / false: 打ち切り
+    flag(ok) { flag.setAttribute('class', 'flag ' + (ok === 'plain' ? 'up plain' : ok ? 'up ok' : 'ng')); },
+    // 段階 2: 道具はモデルの外でプログラムが動かす。棚が光って、出力トレイに紙が落ちる
+    lightSlot(name, on) { slots[name]?.classList.toggle('on', on); },
     showPlay(on) { playBtn.hidden = !on; },
     playBtn,
   };
@@ -2405,15 +2425,20 @@ async function* answerOnlyRun(run) {
   diagram.show({ role: 'planner', nodes: ['query', 'model'], edges: ['q_m'] });
   addCard(run, { role: 'ink', who: 'Query', title: C.s1QueryTitle, lead: C.s1QueryLead })
     .append(h('p', { class: 'answer', text: ctx.query }));
+  arena.go('query', { role: 'ink', mood: 'surprise', say: `${T.arena.got} ${ctx.query}` });
   yield;
 
   diagram.show({ role: 'planner', nodes: ['model', 'answer'], edges: ['m_a'] });
   const body = addCard(run, { role: 'planner', who: 'Model', title: C.s1ModelTitle, badge: brain.badge, lead: C.s1ModelLead });
+  arena.go('planner', { role: 'planner', mood: 'think', think: T.arena.think });
+  if (brain.kind === 'script') await arena.wait(1000);
   const live = liveBox(body, brain);
   const prompt = answerOnlyPrompt(ctx);
   const text = await brain.answerOnly(ctx, live.set);
   if (run !== state.run) return;
   live.remove();
+  arena.go('finish', { role: 'planner', mood: 'normal', say: text || C.noAnswer });
+  arena.act(() => arena.flag('plain'));
   const truth = truthNote(ctx.query);
   put(body,
     kv(C.answer, h('p', { class: 'answer', text: text || C.noAnswer })),
@@ -2431,20 +2456,32 @@ async function* toolUseRun(run) {
   diagram.show({ role: 'tools', nodes: ['query', 'tools', 'model'], edges: ['q_m', 't_m'] });
   put(addCard(run, { role: 'ink', who: 'Query', title: C.s2QueryTitle, lead: C.s2QueryLead }),
     h('p', { class: 'answer', text: ctx.query }), kv(C.toolList, toolList()));
+  const A = T.arena, ar = arena;
+  ar.go('query', { role: 'ink', mood: 'surprise', say: `${A.got} ${ctx.query}` });
+  ar.act(() => ar.scanShelf());
   yield;
 
   diagram.show({ role: 'planner', nodes: ['model', 'tools'], edges: ['m_t'] });
   let body = addCard(run, { role: 'planner', who: 'Model', title: C.s2PickTitle, badge: brain.badge, lead: C.s2PickLead });
+  ar.go('planner', { role: 'planner', mood: 'think', think: A.think });
+  if (brain.kind === 'script') await ar.wait(1000);
   let live = liveBox(body, brain);
   const pPrompt = pickPrompt(ctx);
   ctx.call = await brain.pickTool(ctx, live.set);
   if (!alive()) return;
   live.remove();
   put(body, kv(C.call, pre(showCall(ctx.call.tool || C.empty, ctx.call.args))), promptDetails(pPrompt));
+  ar.say(showCall(ctx.call.tool || C.empty, ctx.call.args), 'work');
   yield;
 
   diagram.show({ role: 'tools', nodes: ['tools', 'outputs'], edges: ['t_o'] });
   const { tool, args } = ctx.call;
+  // モデルは机に座ったまま。道具は棚の上でひとりでに動く
+  ar.act(() => { ar.lightSlot(tool, true); });
+  ar.say(A.waitTool, 'normal');
+  ar.wait(900);
+  await ar.idle();
+  if (!alive()) return;
   if (!KIT.tools[tool]) ctx.output = { error: T.err.noTool(tool || C.empty) };
   else {
     const bad = checkArgs(tool, args);
@@ -2454,10 +2491,13 @@ async function* toolUseRun(run) {
   if (!alive()) return;
   put(addCard(run, { role: 'tools', who: 'Tools', title: C.s2RunTitle, badge: C.codeRun, lead: C.s2RunLead }),
     kv(ctx.output.error ? C.outputErr : C.output, pre(fmtOut(ctx.output))));
+  ar.act(() => { ar.lightSlot(tool, false); ar.paper(!!ctx.output.error); });
   yield;
 
   diagram.show({ role: 'planner', nodes: ['outputs', 'model', 'answer'], edges: ['o_m', 'm_a'] });
   body = addCard(run, { role: 'planner', who: 'Model', title: C.s2AnswerTitle, badge: brain.badge, lead: C.s2AnswerLead });
+  ar.go('executor', { role: 'planner', mood: 'think', think: A.readOut });
+  if (brain.kind === 'script') await ar.wait(1000);
   live = liveBox(body, brain);
   const aPrompt = answerWithPrompt(ctx);
   const text = ctx.output.error && brain.kind === 'script'
@@ -2465,6 +2505,8 @@ async function* toolUseRun(run) {
     : await brain.answerWith(ctx, live.set);
   if (!alive()) return;
   live.remove();
+  ar.go('finish', { role: 'planner', mood: ctx.output.error ? 'sad' : 'happy', say: text || C.noAnswer });
+  ar.act(() => ar.flag(ctx.output.error ? false : 'plain'));
   put(body,
     kv(C.answer, h('p', { class: 'answer', text: text || C.noAnswer })),
     promptDetails(aPrompt),
@@ -2695,7 +2737,7 @@ function syncControls() {
   el.auto.setAttribute('aria-pressed', String(state.auto));
   el.next.classList.toggle('primary', !r?.finished);
   el.reset.classList.toggle('primary', !!r?.finished);
-  arena.showPlay(state.stage >= 3 && !r && !blocked && !state.auto);
+  arena.showPlay(!r && !blocked && !state.auto);
 }
 async function nextStep() {
   if (!state.run) {
@@ -2725,7 +2767,7 @@ async function autoLoop() {
   while (state.auto && !(state.run?.finished)) {
     await nextStep();
     if (state.run?.finished) break;
-    if (state.stage >= 3) { await arena.idle(); await sleep(1300); } else await sleep(1500);
+    await arena.idle(); await sleep(1300);
   }
   state.auto = false; syncControls();
 }
@@ -2737,8 +2779,7 @@ function syncSetup() {
   el.scriptBox.hidden = mode !== 'script';
   el.sceneField.hidden = !(mode === 'script' && stage >= 3);
   el.desk.hidden = stage !== 4;
-  el.arena.hidden = stage < 3;
-  el.stage.classList.toggle('arena-on', stage >= 3);
+  el.stage.classList.add('arena-on');
   el.modelBox.hidden = el.modelField.hidden = el.loadBtn.hidden = mode !== 'model';
   el.sceneQuery.textContent = currentQuery();
 }
