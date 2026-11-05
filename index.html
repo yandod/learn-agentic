@@ -636,6 +636,9 @@ ${inv}
       chipDesk: ['お知らせを見て、星空ノートを5冊フェアの値段で買うといくらか計算して', '赤いハートをドット絵で描いて'],
       webQuery: n => `${n} 価格`,
       chipWeb: ['今月のおすすめ商品は？', '赤いハートの画像を作って'],
+      webScenes: { search: '情報を調べる（Web 検索）', image: '画像を作る（画像生成）' },
+      qImage: '赤いハートの画像を作って', imagePrompt: '赤いハート',
+      imageAnswer: p => `「${p}」の画像を作りました。下のキャンバスに表示しています。`,
       badge: '台本（モデルの代役）',
       goodThought: '「先週」の範囲を決めるには今日の日付が要る。売上1位の商品名がわかれば、その価格を引ける。',
       goodAnswer: (a, b, name, price) => `先週（${a}〜${b}）いちばん売れたのは「${name}」で、価格は ${price}です。`,
@@ -957,6 +960,9 @@ Tool output: ${output}`,
       chipDesk: ['Check the news and calculate the cost of 5 Starry Sky Notebooks at the fair price', 'Draw a red heart in pixel art'],
       webQuery: n => `${n} price`,
       chipWeb: ['What is this month’s pick?', 'Make an image of a red heart'],
+      webScenes: { search: 'Look something up (web search)', image: 'Make an image (image generation)' },
+      qImage: 'Make an image of a red heart', imagePrompt: 'a red heart',
+      imageAnswer: p => `I made an image of ${p}. It is shown on the canvas below.`,
       badge: 'Script (stand-in for the model)',
       goodThought: 'Setting the range for "last week" needs today’s date. Once I know the name of the top seller, I can look up its price.',
       goodAnswer: (a, b, name, price) => `The best-selling product last week (${a} to ${b}) was the ${name}, and its price is ${price}.`,
@@ -1277,6 +1283,9 @@ ${inv}
       chipDesk: ['알림을 보고, 별하늘 노트 5권을 페어 가격으로 사면 얼마인지 계산해 줘', '빨간 하트를 도트 그림으로 그려 줘'],
       webQuery: n => `${n} 가격`,
       chipWeb: ['이번 달 추천 상품은?', '빨간 하트 이미지를 만들어 줘'],
+      webScenes: { search: '정보를 찾기(웹 검색)', image: '이미지 만들기(이미지 생성)' },
+      qImage: '빨간 하트 이미지를 만들어 줘', imagePrompt: '빨간 하트',
+      imageAnswer: p => `"${p}" 이미지를 만들었습니다. 아래 캔버스에 표시하고 있습니다.`,
       badge: '대본(모델 대역)',
       goodThought: '"지난주" 범위를 정하려면 오늘 날짜가 필요하다. 판매 1위 상품명을 알면 그 가격을 찾을 수 있다.',
       goodAnswer: (a, b, name, price) => `지난주(${a}~${b}) 가장 많이 팔린 상품은 "${name}"이고, 가격은 ${price}입니다.`,
@@ -1619,7 +1628,7 @@ const colorIn = text => Object.keys(PAL).find(c => {
   return /^[a-z ]+$/.test(name) ? new RegExp(`\\b${name}\\b`).test(text) : text.includes(name.length > 1 ? name.slice(0, -1) : name);
 });
 const priceIn = text => Number((T.priceRe.exec(text) || [, '0'])[1].replace(/,/g, ''));
-let Q_MAIN, Q_SIMPLE, Q_DESK, SCENES, DESK_SCENES, SCENES_BY_STAGE;
+let Q_MAIN, Q_SIMPLE, Q_DESK, SCENES, WEB_SCENES, DESK_SCENES, SCENES_BY_STAGE;
 function buildScenes() {
   const S = T.script, sc = S.scenes, ds = S.deskScenes;
   Q_MAIN = S.qMain; Q_SIMPLE = S.qSimple; Q_DESK = S.qDesk;
@@ -1699,7 +1708,24 @@ function buildScenes() {
       ],
     },
   ];
-  SCENES_BY_STAGE = { 3: SCENES, 4: DESK_SCENES };
+  // 段階 2: 道具を1回だけ呼ぶ。Web 検索で調べるか、画像生成で作るかを選べる
+  const W = S.webScenes;
+  WEB_SCENES = [
+    {
+      id: 'search', label: W.search, query: Q_SIMPLE,
+      pick: () => ({ tool: 'web_search', args: { query: S.webQuery(PRODUCTS[2].name) } }),
+      answer: o => {
+        const name = PRODUCTS[2].name, hit = (o.results || []).find(r => r.snippet.includes(name));
+        return hit ? S.answerWith(name, yen(priceIn(hit.snippet.slice(hit.snippet.indexOf(name))))) : T.c.noAnswer;
+      },
+    },
+    {
+      id: 'image', label: W.image, query: S.qImage,
+      pick: () => ({ tool: 'generate_image', args: { prompt: S.imagePrompt } }),
+      answer: o => S.imageAnswer(o.prompt),
+    },
+  ];
+  SCENES_BY_STAGE = { 2: WEB_SCENES, 3: SCENES, 4: DESK_SCENES };
 }
 function scriptedBrain(scene) {
   const att = ctx => scene.attempts[Math.min(ctx.attempt, scene.attempts.length) - 1];
@@ -1710,12 +1736,8 @@ function scriptedBrain(scene) {
     async judge(ctx) { await sleep(250); return att(ctx).judge(ctx.outputs); },
     // 段階 1・2 用。店のデータを見ていない答えは、わざと当て推量にしてある。
     async answerOnly() { await sleep(250); return T.script.guessAnswer; },
-    async pickTool() { await sleep(250); return { tool: 'web_search', args: { query: T.script.webQuery(PRODUCTS[2].name) } }; },
-    async answerWith(ctx) {
-      await sleep(250);
-      const name = PRODUCTS[2].name, hit = (ctx.output.results || []).find(r => r.snippet.includes(name));
-      return hit ? T.script.answerWith(name, yen(priceIn(hit.snippet.slice(hit.snippet.indexOf(name))))) : T.c.noAnswer;
-    },
+    async pickTool() { await sleep(250); return scene.pick(); },
+    async answerWith(ctx) { await sleep(250); return scene.answer(ctx.output); },
   };
 }
 
@@ -2821,7 +2843,7 @@ const clipText = (s, n) => { s = str(s); return s.length > n ? s.slice(0, n - 1)
 const statsText = run => T.c.stats(run.ctx.attempt, run.stats.tool, run.stats.model, run.brain.kind === 'script');
 
 /* ---------- 画面の状態と操作 ---------- */
-const state = { stage: 1, mode: 'script', sceneIdx: { 3: 0, 4: 0 }, run: null, auto: false };
+const state = { stage: 1, mode: 'script', sceneIdx: { 2: 0, 3: 0, 4: 0 }, run: null, auto: false };
 const curScene = () => SCENES_BY_STAGE[state.stage]?.[state.sceneIdx[state.stage]] || SCENES[0];
 const el = {
   next: $('#nextBtn'), auto: $('#autoBtn'), reset: $('#resetBtn'),
@@ -2835,7 +2857,7 @@ const el = {
   desk: $('#desk'), footer: $('#footerText'), arena: $('#arena'),
 };
 const modelReady = () => llm.engine && llm.modelId === el.modelSel.value;
-const currentQuery = () => (state.mode !== 'script' ? el.query.value.trim() : state.stage >= 3 ? curScene().query : Q_SIMPLE);
+const currentQuery = () => (state.mode !== 'script' ? el.query.value.trim() : state.stage >= 2 ? curScene().query : Q_SIMPLE);
 
 function newRun() {
   const run = {
@@ -2907,7 +2929,7 @@ function syncSetup() {
   el.modeScript.setAttribute('aria-pressed', String(mode === 'script'));
   el.modeModel.setAttribute('aria-pressed', String(mode === 'model'));
   el.scriptBox.hidden = mode !== 'script';
-  el.sceneField.hidden = !(mode === 'script' && stage >= 3);
+  el.sceneField.hidden = !(mode === 'script' && stage >= 2);
   el.desk.hidden = stage !== 4 && stage !== 2;
   desk.setStage(stage);
   el.stage.classList.add('arena-on');
