@@ -213,6 +213,11 @@ ul.tools span{font-size:13px;color:var(--muted)}
 .page h3{margin:0 0 4px;font-size:14px}
 .page p{margin:0 0 4px}
 .page .blank{color:var(--muted)}
+.desk.two .desk-grid{grid-template-columns:minmax(0,1fr) minmax(0,280px);align-items:start}
+@media (max-width:560px){.desk.two .desk-grid{grid-template-columns:minmax(0,1fr)}}
+.page .hit{margin:0 0 8px}
+.page .hit button{border:0;background:none;padding:0;color:var(--planner);text-decoration:underline;cursor:pointer;font-size:13px;font-weight:700;text-align:left}
+.page .hit small{display:block;font-family:var(--mono);font-size:11px;color:var(--finish)}
 .page .links{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:6px}
 .page .links button{border:0;background:none;padding:2px 0;color:var(--planner);text-decoration:underline;cursor:pointer;font-size:13px}
 .calc-disp{background:var(--paper);border-radius:6px;padding:4px 8px;text-align:right;font-family:var(--mono);display:grid;min-height:54px}
@@ -377,7 +382,7 @@ footer a{color:inherit}
         <div class="legend"><span><i></i><span data-i18n="legendSolid">実線は係（部品）</span></span><span><i class="d"></i><span data-i18n="legendDashed">破線は受け渡されるデータ</span></span></div>
       </div>
       <section class="desk" id="desk" data-i18n-aria="deskTitle" aria-label="作業台" hidden>
-        <p class="desk-head"><b data-i18n="deskTitle">作業台</b><span data-i18n="deskNote">エージェントが道具として操作します。手で触ることもできます。</span></p>
+        <p class="desk-head"><b data-i18n="deskTitle">作業台</b><span data-i18n="deskNote">AI が道具として操作します。手で触ることもできます。</span></p>
         <div class="desk-grid">
           <div class="tool-box browser" id="boxBrowser">
             <p class="tool-title">🌐 <span data-i18n="browser">ブラウザ</span><code>open_page</code></p>
@@ -473,13 +478,14 @@ const I18N = {
       modeLabel: '動かし方', modeScript: '台本', modeModel: 'ブラウザ内モデル',
       scene: '場面', model: 'モデル', loadBtn: 'モデルを読み込む', queryPrefix: '質問: ', query: '質問',
       legendSolid: '実線は係（部品）', legendDashed: '破線は受け渡されるデータ',
-      deskTitle: '作業台', deskNote: 'エージェントが道具として操作します。手で触ることもできます。',
+      deskTitle: '作業台', deskNote: 'AI が道具として操作します。手で触ることもできます。',
       browser: 'ブラウザ', calc: '電卓', pixel: 'ドット絵', canvasAria: '16×16 のドット絵キャンバス',
       next: '次のステップ', auto: '自動で進める', stop: '止める', reset: '最初から',
       logHint: '横にスライドすると前のステップを見返せます。図もそのステップに切り替わります。',
       logAria: 'ステップの記録',
-      footer: `図と用語は Chip Huyen ${FOOTER_LINK}（2025）の図 6-9 をもとにしています。店も商品も売上も、段階 4 のサイト（shop.example）も架空のデータで、店の「今日」は 2030-09-13 に固定しています。`,
+      footer: `図と用語は Chip Huyen ${FOOTER_LINK}（2025）の図 6-9 をもとにしています。店も商品も売上も、段階 2・4 の Web（shop.example）も架空のデータで、店の「今日」は 2030-09-13 に固定しています。`,
       eraser: '消しゴム', backspace: '1文字消す',
+      imageGen: '画像生成', webSearch: 'Web 検索',
     },
     products: [['旅するマグカップ', '食器'], ['猫の付箋', '文具'], ['そらいろ手帳', '文具'], ['ふわふわ靴下', '衣類'],
       ['夜ふかしブレンド', '食品'], ['木のしおり', '文具'], ['雨の日トート', 'バッグ'], ['星空ノート', '文具']],
@@ -504,6 +510,8 @@ const I18N = {
       noDots: '色のついたドットが1つもありません',
       noTool: t => `「${t}」という道具は一覧にありません`,
       missingArgs: l => `引数が足りません: ${l}`, extraArgs: l => `この道具にない引数があります: ${l}`,
+      queryRequired: 'query を指定してください', promptRequired: 'prompt を指定してください',
+      noSubject: list => `この練習用の画像生成で作れるのは ${list} だけです`,
     },
     tools: {
       get_today_date: '今日の日付を返す',
@@ -515,6 +523,8 @@ const I18N = {
       desk_calculator: '電卓のキーを押して式を計算する', desk_expression: '数字と + - * / ( ) . だけの式',
       draw_pixels: `ドット絵キャンバス（${PIX}×${PIX}）に絵を描く。前の絵は消える`,
       art: legend => `絵。1行を${PIX}文字までにして、行を / で区切る（${PIX}行まで）。文字の意味: ${legend}`,
+      web_search: `Web を検索し、ヒットしたページの題名・URL・抜き出しを返す（このデモの Web は架空の店のサイト ${SITE}/ だけ）`, query: '検索する言葉',
+      generate_image: subs => `言葉で指示した画像を作り、キャンバスに表示する（練習用。作れるのは ${subs} だけ）`, prompt: '作りたい画像の説明（例: 赤いハート）',
     },
     kits: {
       shop: {
@@ -625,6 +635,8 @@ ${inv}
       qDesk: 'お店のサイトで今月のおすすめ商品を調べて、3個買うといくらか計算し、その商品をドット絵で描いて',
       chipShop: ['先週の売上トップ2の価格を合計するといくら？'],
       chipDesk: ['お知らせを見て、星空ノートを5冊フェアの値段で買うといくらか計算して', '赤いハートをドット絵で描いて'],
+      webQuery: n => `${n} 価格`,
+      chipWeb: ['今月のおすすめ商品は？', '赤いハートの画像を作って'],
       badge: '台本（モデルの代役）',
       goodThought: '「先週」の範囲を決めるには今日の日付が要る。売上1位の商品名がわかれば、その価格を引ける。',
       goodAnswer: (a, b, name, price) => `先週（${a}〜${b}）いちばん売れたのは「${name}」で、価格は ${price}です。`,
@@ -686,10 +698,11 @@ ${inv}
     ],
     stageDesc: [
       '質問を受け取り、学習した知識だけで答えの文を作ります。',
-      '道具の一覧を渡されたモデルは、道具を呼び、その出力を読んでから答えを作ります。',
+      '道具の一覧（Web 検索と画像生成）を渡されたモデルは、道具を1回呼び、その出力を読んでから答えを作ります。',
       '道具を何度も使う質問では、計画を立て、点検し、実行し、結果を確かめます。',
       'エージェントの形は段階 3 と同じまま、道具を作業台のブラウザ・電卓・ドット絵キャンバスに入れ替えます。道具を呼ぶと、作業台が実際に動きます。',
     ],
+    imgSubjects: { mug: 'マグカップ', heart: 'ハート', star: '星', cat: '猫', notebook: 'ノート' },
     arena: {
       aria: 'エージェントが持ち場を歩いて回り、計画・点検・実行・確認をするステージ',
       st: { query: '入口', planner: '計画の机', board: '計画ボード', evaluator: '点検台', shelf: '道具の棚', executor: '作業台', tray: '出力トレイ', finish: 'ゴール' },
@@ -705,6 +718,7 @@ ${inv}
       play2: '動かして見る', playNote2: '質問を受け取ったモデルの動きを見ます',
     },
     c: {
+      searchTitle: q => `「${q}」の検索結果`, noHits: '見つかりませんでした。',
       blank: 'まだ何も開いていません。', loading: '読み込み中…',
       showPrompt: 'モデルに渡す指示文を見る', thinking: 'モデルが考えています…',
       modelBadge: 'モデルが生成', codeRun: 'コードで実行', codeJudge: 'コードで判定',
@@ -720,11 +734,11 @@ ${inv}
       s1ModelLead: '知っていることだけで文を作ります。知らないことを聞かれると、答えられないか、もっともらしい内容を作ってしまいます。',
       s1Next: '店のデータを調べる手段があれば、当て推量をしなくて済みます。次の段階では、モデルに道具を渡します。',
       s2QueryTitle: '質問と、道具の一覧が届く',
-      s2QueryLead: '段階 1 との違いは、道具の一覧が一緒に渡されることです。道具は、店のデータを調べたり計算したりする関数です。',
+      s2QueryLead: '段階 1 との違いは、道具の一覧が一緒に渡されることです。ここでは、生成AIのサービスによくある Web 検索と画像生成を道具にします。',
       s2PickTitle: '道具の呼び出しを書く',
       s2PickLead: 'モデルは道具を自分では動かせません。「この道具を、この引数で呼んでほしい」という文を書くだけです。',
       s2RunTitle: '道具が実行される',
-      s2RunLead: 'プログラムが呼び出しの文を読み取り、実際の関数を動かします。ここはモデルの外で起きます。',
+      s2RunLead: 'プログラムが呼び出しの文を読み取り、実際の道具を動かします。ここはモデルの外で起きます。下の作業台で、検索や画像の生成が実際に動きます。',
       s2AnswerTitle: '出力を読んで、答えを作る',
       s2AnswerLead: '道具の出力が、質問と一緒にモデルへ戻されます。モデルはそれを読んで答えの文を作ります。',
       s2ToolErr: '道具がエラーになったので、答えられません。',
@@ -785,13 +799,14 @@ ${inv}
       modeLabel: 'How to run', modeScript: 'Script', modeModel: 'In-browser model',
       scene: 'Scene', model: 'Model', loadBtn: 'Load model', queryPrefix: 'Question: ', query: 'Question',
       legendSolid: 'Solid: components', legendDashed: 'Dashed: data passed along',
-      deskTitle: 'Workbench', deskNote: 'The agent operates these as tools. You can also use them by hand.',
+      deskTitle: 'Workbench', deskNote: 'The AI operates these as tools. You can also use them by hand.',
       browser: 'Browser', calc: 'Calculator', pixel: 'Pixel art', canvasAria: '16×16 pixel-art canvas',
       next: 'Next step', auto: 'Auto-play', stop: 'Stop', reset: 'Restart',
       logHint: 'Swipe sideways to look back at earlier steps. The diagram switches to that step too.',
       logAria: 'Step log',
-      footer: `The diagram and terms are based on Figure 6-9 of Chip Huyen’s ${FOOTER_LINK} (2025). The shop, products, sales, and the stage 4 site (shop.example) are all fictional, and the shop’s “today” is fixed at 2030-09-13.`,
+      footer: `The diagram and terms are based on Figure 6-9 of Chip Huyen’s ${FOOTER_LINK} (2025). The shop, products, sales, and the web in stages 2 and 4 (shop.example) are all fictional, and the shop’s “today” is fixed at 2030-09-13.`,
       eraser: 'Eraser', backspace: 'Delete one character',
+      imageGen: 'Image generation', webSearch: 'Web search',
     },
     products: [['Travel Mug', 'Tableware'], ['Cat Sticky Notes', 'Stationery'], ['Sky-Blue Planner', 'Stationery'], ['Fluffy Socks', 'Clothing'],
       ['Night Owl Blend', 'Food'], ['Wooden Bookmark', 'Stationery'], ['Rainy Day Tote', 'Bags'], ['Starry Sky Notebook', 'Stationery']],
@@ -816,6 +831,8 @@ ${inv}
       noDots: 'There are no colored dots',
       noTool: t => `There is no tool named "${t}" on the list`,
       missingArgs: l => `Missing arguments: ${l}`, extraArgs: l => `Arguments this tool does not take: ${l}`,
+      queryRequired: 'Specify query', promptRequired: 'Specify prompt',
+      noSubject: list => `This practice image generator can only make ${list}`,
     },
     tools: {
       get_today_date: 'Returns today’s date',
@@ -827,6 +844,8 @@ ${inv}
       desk_calculator: 'Presses the calculator keys to evaluate an expression', desk_expression: 'An expression using only digits and + - * / ( ) .',
       draw_pixels: `Draws a picture on the pixel-art canvas (${PIX}×${PIX}). The previous picture is erased`,
       art: legend => `The picture. Each row is up to ${PIX} characters, rows are separated by / (up to ${PIX} rows). Characters: ${legend}`,
+      web_search: `Searches the web and returns the title, URL, and excerpt of matching pages (in this demo, the web is only the fictional shop site ${SITE}/)`, query: 'Words to search for',
+      generate_image: subs => `Creates an image from a text description and shows it on the canvas (a practice version that can only make ${subs})`, prompt: 'Description of the image (e.g. a red heart)',
     },
     kits: {
       shop: {
@@ -937,6 +956,8 @@ Tool output: ${output}`,
       qDesk: 'Find this month’s featured product on the shop’s site, calculate the cost of buying 3, and draw that product as pixel art',
       chipShop: ['What is the total price of last week’s top 2 sellers?'],
       chipDesk: ['Check the news and calculate the cost of 5 Starry Sky Notebooks at the fair price', 'Draw a red heart in pixel art'],
+      webQuery: n => `${n} price`,
+      chipWeb: ['What is this month’s pick?', 'Make an image of a red heart'],
       badge: 'Script (stand-in for the model)',
       goodThought: 'Setting the range for "last week" needs today’s date. Once I know the name of the top seller, I can look up its price.',
       goodAnswer: (a, b, name, price) => `The best-selling product last week (${a} to ${b}) was the ${name}, and its price is ${price}.`,
@@ -998,10 +1019,11 @@ Tool output: ${output}`,
     ],
     stageDesc: [
       'The model receives the question and writes an answer using only what it learned in training.',
-      'Given a list of tools, the model calls a tool, reads its output, and then writes the answer.',
+      'Given a list of tools (web search and image generation), the model calls a tool once, reads its output, and then writes the answer.',
       'For questions that need several tool calls, the agent makes a plan, checks it, executes it, and checks the results.',
       'The agent keeps the same shape as in stage 3, but its tools are swapped for the browser, calculator, and pixel-art canvas on the workbench. Calling a tool actually moves the workbench.',
     ],
+    imgSubjects: { mug: 'a mug', heart: 'a heart', star: 'a star', cat: 'a cat', notebook: 'a notebook' },
     arena: {
       aria: 'A stage where the agent walks between stations to plan, check, run tools, and verify',
       st: { query: 'Entrance', planner: 'Planning desk', board: 'Plan board', evaluator: 'Check table', shelf: 'Tool shelf', executor: 'Workbench', tray: 'Output tray', finish: 'Goal' },
@@ -1016,6 +1038,7 @@ Tool output: ${output}`,
       play2: 'Watch it run', playNote2: 'See what the model does with the question',
     },
     c: {
+      searchTitle: q => `Results for “${q}”`, noHits: 'No results.',
       blank: 'Nothing has been opened yet.', loading: 'Loading…',
       showPrompt: 'Show the prompt given to the model', thinking: 'The model is thinking…',
       modelBadge: 'Generated by the model', codeRun: 'Run by code', codeJudge: 'Judged by code',
@@ -1031,11 +1054,11 @@ Tool output: ${output}`,
       s1ModelLead: 'It writes a sentence from what it already knows. Asked about something it doesn’t know, it either can’t answer or makes up something plausible.',
       s1Next: 'With a way to look up the shop’s data, it would not have to guess. In the next stage, we give the model tools.',
       s2QueryTitle: 'The question and a list of tools arrive',
-      s2QueryLead: 'The difference from stage 1 is that a list of tools comes along with the question. Tools are functions that look up the shop’s data or do calculations.',
+      s2QueryLead: 'The difference from stage 1 is that a list of tools comes along with the question. Here the tools are web search and image generation, which many generative AI services offer.',
       s2PickTitle: 'Writes a tool call',
       s2PickLead: 'The model cannot run tools by itself. It only writes text saying "please call this tool with these arguments."',
       s2RunTitle: 'The tool runs',
-      s2RunLead: 'The program reads the call text and runs the actual function. This happens outside the model.',
+      s2RunLead: 'The program reads the call text and runs the actual tool. This happens outside the model. On the workbench below, the search or image generation actually runs.',
       s2AnswerTitle: 'Reads the output and writes the answer',
       s2AnswerLead: 'The tool output is sent back to the model along with the question. The model reads it and writes the answer.',
       s2ToolErr: 'The tool returned an error, so I can’t answer.',
@@ -1096,13 +1119,14 @@ Tool output: ${output}`,
       modeLabel: '실행 방식', modeScript: '대본', modeModel: '브라우저 내 모델',
       scene: '장면', model: '모델', loadBtn: '모델 불러오기', queryPrefix: '질문: ', query: '질문',
       legendSolid: '실선은 구성 요소', legendDashed: '점선은 주고받는 데이터',
-      deskTitle: '작업대', deskNote: '에이전트가 도구로 조작합니다. 직접 만져 볼 수도 있습니다.',
+      deskTitle: '작업대', deskNote: 'AI가 도구로 조작합니다. 직접 만져 볼 수도 있습니다.',
       browser: '브라우저', calc: '계산기', pixel: '도트 그림', canvasAria: '16×16 도트 그림 캔버스',
       next: '다음 스텝', auto: '자동으로 진행', stop: '멈추기', reset: '처음부터',
       logHint: '옆으로 밀면 이전 스텝을 다시 볼 수 있습니다. 그림도 그 스텝으로 바뀝니다.',
       logAria: '스텝 기록',
-      footer: `그림과 용어는 Chip Huyen의 ${FOOTER_LINK}(2025) 그림 6-9를 바탕으로 했습니다. 가게도 상품도 매출도, 4단계의 사이트(shop.example)도 가상의 데이터이며, 가게의 ‘오늘’은 2030-09-13으로 고정되어 있습니다.`,
+      footer: `그림과 용어는 Chip Huyen의 ${FOOTER_LINK}(2025) 그림 6-9를 바탕으로 했습니다. 가게도 상품도 매출도, 2·4단계의 웹(shop.example)도 가상의 데이터이며, 가게의 ‘오늘’은 2030-09-13으로 고정되어 있습니다.`,
       eraser: '지우개', backspace: '한 글자 지우기',
+      imageGen: '이미지 생성', webSearch: '웹 검색',
     },
     products: [['여행하는 머그컵', '식기'], ['고양이 포스트잇', '문구'], ['하늘색 수첩', '문구'], ['폭신폭신 양말', '의류'],
       ['올빼미 블렌드', '식품'], ['나무 책갈피', '문구'], ['비 오는 날 토트백', '가방'], ['별하늘 노트', '문구']],
@@ -1127,6 +1151,8 @@ Tool output: ${output}`,
       noDots: '색이 있는 도트가 하나도 없습니다',
       noTool: t => `"${t}" 도구는 목록에 없습니다`,
       missingArgs: l => `인수가 부족합니다: ${l}`, extraArgs: l => `이 도구에 없는 인수가 있습니다: ${l}`,
+      queryRequired: 'query를 지정해 주세요', promptRequired: 'prompt를 지정해 주세요',
+      noSubject: list => `이 연습용 이미지 생성으로 만들 수 있는 것은 ${list}뿐입니다`,
     },
     tools: {
       get_today_date: '오늘 날짜를 돌려준다',
@@ -1138,6 +1164,8 @@ Tool output: ${output}`,
       desk_calculator: '계산기 키를 눌러 식을 계산한다', desk_expression: '숫자와 + - * / ( ) .만 쓴 식',
       draw_pixels: `도트 그림 캔버스(${PIX}×${PIX})에 그림을 그린다. 이전 그림은 지워진다`,
       art: legend => `그림. 한 행은 ${PIX}글자까지, 행은 /로 구분한다(${PIX}행까지). 문자의 의미: ${legend}`,
+      web_search: `웹을 검색해, 걸린 페이지의 제목·URL·발췌를 돌려준다(이 데모의 웹은 가상의 가게 사이트 ${SITE}/ 뿐)`, query: '검색할 말',
+      generate_image: subs => `말로 지시한 이미지를 만들어 캔버스에 표시한다(연습용. 만들 수 있는 것은 ${subs}뿐)`, prompt: '만들 이미지의 설명(예: 빨간 하트)',
     },
     kits: {
       shop: {
@@ -1248,6 +1276,8 @@ ${inv}
       qDesk: '가게 사이트에서 이번 달 추천 상품을 찾아보고, 3개 사면 얼마인지 계산한 뒤, 그 상품을 도트 그림으로 그려 줘',
       chipShop: ['지난주 판매 상위 2개 상품의 가격을 합하면 얼마?'],
       chipDesk: ['알림을 보고, 별하늘 노트 5권을 페어 가격으로 사면 얼마인지 계산해 줘', '빨간 하트를 도트 그림으로 그려 줘'],
+      webQuery: n => `${n} 가격`,
+      chipWeb: ['이번 달 추천 상품은?', '빨간 하트 이미지를 만들어 줘'],
       badge: '대본(모델 대역)',
       goodThought: '"지난주" 범위를 정하려면 오늘 날짜가 필요하다. 판매 1위 상품명을 알면 그 가격을 찾을 수 있다.',
       goodAnswer: (a, b, name, price) => `지난주(${a}~${b}) 가장 많이 팔린 상품은 "${name}"이고, 가격은 ${price}입니다.`,
@@ -1309,10 +1339,11 @@ ${inv}
     ],
     stageDesc: [
       '질문을 받아, 학습한 지식만으로 답의 문장을 만듭니다.',
-      '도구 목록을 받은 모델은 도구를 부르고, 그 출력을 읽은 뒤 답을 만듭니다.',
+      '도구 목록(웹 검색과 이미지 생성)을 받은 모델은 도구를 한 번 부르고, 그 출력을 읽은 뒤 답을 만듭니다.',
       '도구를 여러 번 써야 하는 질문에서는 계획을 세우고, 점검하고, 실행하고, 결과를 확인합니다.',
       '에이전트의 형태는 3단계 그대로 두고, 도구를 작업대의 브라우저·계산기·도트 그림 캔버스로 바꿉니다. 도구를 부르면 작업대가 실제로 움직입니다.',
     ],
+    imgSubjects: { mug: '머그컵', heart: '하트', star: '별', cat: '고양이', notebook: '노트' },
     arena: {
       aria: '에이전트가 자리를 옮겨 다니며 계획·점검·실행·확인을 하는 무대',
       st: { query: '입구', planner: '계획 책상', board: '계획 보드', evaluator: '점검대', shelf: '도구 선반', executor: '작업대', tray: '출력 트레이', finish: '골' },
@@ -1327,6 +1358,7 @@ ${inv}
       play2: '움직여서 보기', playNote2: '질문을 받은 모델의 움직임을 봅니다',
     },
     c: {
+      searchTitle: q => `“${q}” 검색 결과`, noHits: '찾지 못했습니다.',
       blank: '아직 아무것도 열지 않았습니다.', loading: '불러오는 중…',
       showPrompt: '모델에 건네는 지시문 보기', thinking: '모델이 생각하고 있습니다…',
       modelBadge: '모델이 생성', codeRun: '코드로 실행', codeJudge: '코드로 판정',
@@ -1342,11 +1374,11 @@ ${inv}
       s1ModelLead: '아는 것만으로 문장을 만듭니다. 모르는 것을 물으면 답하지 못하거나, 그럴듯한 내용을 지어내 버립니다.',
       s1Next: '가게 데이터를 조사할 수단이 있으면 짐작하지 않아도 됩니다. 다음 단계에서는 모델에게 도구를 줍니다.',
       s2QueryTitle: '질문과 도구 목록이 도착한다',
-      s2QueryLead: '1단계와 다른 점은 도구 목록이 함께 건네진다는 것입니다. 도구는 가게 데이터를 조사하거나 계산하는 함수입니다.',
+      s2QueryLead: '1단계와 다른 점은 도구 목록이 함께 건네진다는 것입니다. 여기서는 생성형 AI 서비스에 흔한 웹 검색과 이미지 생성을 도구로 씁니다.',
       s2PickTitle: '도구 호출을 쓴다',
       s2PickLead: '모델은 도구를 스스로 움직일 수 없습니다. "이 도구를 이 인수로 불러 달라"는 문장을 쓸 뿐입니다.',
       s2RunTitle: '도구가 실행된다',
-      s2RunLead: '프로그램이 호출 문장을 읽어 내고 실제 함수를 움직입니다. 이 일은 모델 바깥에서 일어납니다.',
+      s2RunLead: '프로그램이 호출 문장을 읽어 내고 실제 도구를 움직입니다. 이 일은 모델 바깥에서 일어납니다. 아래 작업대에서 검색이나 이미지 생성이 실제로 움직입니다.',
       s2AnswerTitle: '출력을 읽고 답을 만든다',
       s2AnswerLead: '도구의 출력이 질문과 함께 모델로 돌아갑니다. 모델은 그것을 읽고 답의 문장을 만듭니다.',
       s2ToolErr: '도구에서 오류가 났으므로 답할 수 없습니다.',
@@ -1454,7 +1486,7 @@ function fetchProductInfo({ product_name }) {
 }
 
 // 道具の一式と、それに合わせた指示文の決まり。言語と段階で切り替える。
-let SHOP_TOOLS, DESK_TOOLS, KITS, KIT;
+let SHOP_TOOLS, WEB_TOOLS, DESK_TOOLS, KITS, KIT;
 function buildTools() {
   const d = T.tools;
   SHOP_TOOLS = {
@@ -1481,7 +1513,16 @@ function buildTools() {
       run: ({ art }) => desk.draw(art),
     },
   };
-  KITS = { shop: { tools: SHOP_TOOLS, ...T.kits.shop }, desk: { tools: DESK_TOOLS, ...T.kits.desk } };
+  /* 段階 2 の道具: 生成AIのサービスによくある Web 検索と画像生成。中身は作業台のブラウザとキャンバスを使う */
+  WEB_TOOLS = {
+    web_search: { emoji: '🔎', desc: d.web_search, params: { query: { type: 'string', desc: d.query } }, run: ({ query }) => desk.search(query) },
+    generate_image: { emoji: '🖼️', desc: d.generate_image(subjectList()), params: { prompt: { type: 'string', desc: d.prompt } }, run: ({ prompt }) => desk.generate(prompt) },
+  };
+  KITS = {
+    shop: { tools: SHOP_TOOLS, ...T.kits.shop },
+    web: { tools: WEB_TOOLS, toolsLead: '', runNote: '', planRules: [], argRules: [], planExamples: '' },
+    desk: { tools: DESK_TOOLS, ...T.kits.desk },
+  };
   KIT = KITS.shop;
 }
 const sig = name => `${name}(${Object.keys(KIT.tools[name].params).join(', ')})`;
@@ -1525,7 +1566,7 @@ const judgePrompt = ctx => T.prompt.judge({ query: ctx.query, history: historyTe
 const answerOnlyPrompt = ctx => T.prompt.answerOnly(ctx.query);
 const pickPrompt = ctx => T.prompt.pick({
   inv: inventory(), query: ctx.query,
-  example: JSON.stringify({ tool: 'fetch_product_info', args: { product_name: PRODUCTS[7].name } }),
+  example: JSON.stringify({ tool: 'web_search', args: { query: T.script.webQuery(PRODUCTS[7].name) } }),
 });
 const answerWithPrompt = ctx => T.prompt.answerWith({ query: ctx.query, call: fmtCall(ctx.call.tool, ctx.call.args), output: JSON.stringify(ctx.output) });
 const PICK_SCHEMA = { type: 'object', properties: { tool: { type: 'string' }, args: { type: 'object' } }, required: ['tool', 'args'] };
@@ -1555,6 +1596,29 @@ const MUG_ART = [
   '...kkkkkkkk.....',
   '................',
 ].join('/');
+/* 段階 2 の画像生成（練習用）: 言葉の中から描けるものを見つけ、用意した絵を描く。m は主な色に置きかえる */
+const IMAGES = [
+  { id: 'mug', color: 'b', keys: ['マグ', 'カップ', 'mug', 'cup', '머그', '컵'], art: MUG_ART.replace(/b/g, 'm') },
+  { id: 'heart', color: 'r', keys: ['ハート', 'heart', '하트'], art: [
+    '................', '................', '...mmm....mmm...', '..mmmmm..mmmmm..', '.mmmmmmmmmmmmmm.', '.mmmmmmmmmmmmmm.',
+    '.mmmmmmmmmmmmmm.', '..mmmmmmmmmmmm..', '...mmmmmmmmmm...', '....mmmmmmmm....', '.....mmmmmm.....', '......mmmm......', '.......mm.......'].join('/') },
+  { id: 'star', color: 'y', keys: ['星', 'スター', 'star', '별'], art: [
+    '................', '.......mm.......', '.......mm.......', '......mmmm......', '......mmmm......', 'mmmmmmmmmmmmmmmm', '.mmmmmmmmmmmmmm.',
+    '...mmmmmmmmmm...', '....mmmmmmmm....', '....mmmmmmmm....', '...mmmmmmmmmm...', '...mmmm..mmmm...', '..mmm......mmm..', '..mm........mm..'].join('/') },
+  { id: 'cat', color: 'a', keys: ['猫', 'ねこ', 'ネコ', 'cat', '고양이'], art: [
+    '................', '..m.........m...', '..mm.......mm...', '..mmm.....mmm...', '..mmmmmmmmmmm...', '..mmmmmmmmmmm...', '..mmkmmmmmkmm...',
+    '..mmmmmmmmmmm...', '..mmmmmpmmmmm...', '...mmmmmmmmm....', '....mmmmmmm.....', '...mmmmmmmmm....', '..mmmmmmmmmmm...', '..mmmmmmmmmmm..m', '..mmmmmmmmmmmmm.'].join('/') },
+  { id: 'notebook', color: 's', keys: ['手帳', 'ノート', 'notebook', 'planner', 'note', '수첩', '노트'], art: [
+    '................', '...kkkkkkkkkk...', '...kmmmmmmmmk...', '...kmwwwwwwmk...', '...kmmmmmmmmk...', '...kmmmmmmmmk...', '...kmmmmmmmmk...',
+    '...kmmmmmmmmk...', '...kmmmmmmmmk...', '...kmmmmmmmmk...', '...kmmmmmmmmk...', '...kmmmmmmmmk...', '...kkkkkkkkkk...'].join('/') },
+];
+const subjectList = () => IMAGES.map(i => T.imgSubjects[i.id]).join(LANG === 'en' ? ', ' : '・');
+// 色の名前が言葉に入っていれば、その色で描く（「赤い」「빨간」も拾えるよう、日本語・韓国語は語尾を1文字落として探す）
+const colorIn = text => Object.keys(PAL).find(c => {
+  if (c === '.') return false;
+  const name = T.pal[c].toLowerCase();
+  return /^[a-z ]+$/.test(name) ? new RegExp(`\\b${name}\\b`).test(text) : text.includes(name.length > 1 ? name.slice(0, -1) : name);
+});
 const priceIn = text => Number((T.priceRe.exec(text) || [, '0'])[1].replace(/,/g, ''));
 let Q_MAIN, Q_SIMPLE, Q_DESK, SCENES, DESK_SCENES, SCENES_BY_STAGE;
 function buildScenes() {
@@ -1647,8 +1711,12 @@ function scriptedBrain(scene) {
     async judge(ctx) { await sleep(250); return att(ctx).judge(ctx.outputs); },
     // 段階 1・2 用。店のデータを見ていない答えは、わざと当て推量にしてある。
     async answerOnly() { await sleep(250); return T.script.guessAnswer; },
-    async pickTool() { await sleep(250); return { tool: 'fetch_product_info', args: { product_name: PRODUCTS[2].name } }; },
-    async answerWith(ctx) { await sleep(250); const o = ctx.output; return T.script.answerWith(o.product_name, yen(o.price_yen)); },
+    async pickTool() { await sleep(250); return { tool: 'web_search', args: { query: T.script.webQuery(PRODUCTS[2].name) } }; },
+    async answerWith(ctx) {
+      await sleep(250);
+      const name = PRODUCTS[2].name, hit = (ctx.output.results || []).find(r => r.snippet.includes(name));
+      return hit ? T.script.answerWith(name, yen(priceIn(hit.snippet.slice(hit.snippet.indexOf(name))))) : T.c.noAnswer;
+    },
   };
 }
 
@@ -2225,6 +2293,41 @@ const desk = (() => {
       throw e;
     }
   }
+  // 段階 2 の Web 検索: 店のサイトのページを、言葉の2文字ずつの重なりで探す（日本語・韓国語は語を空白で区切らないため）
+  function searchSite(q) {
+    const qs = str(q).trim();
+    if (!qs) throw new Error(T.err.queryRequired);
+    const norm = t => str(t).toLowerCase().replace(/[\s「」『』“”"'、。，,.!?？！・()（）]/g, '');
+    const nq = norm(qs), grams = new Set();
+    for (let i = 0; i < nq.length - 1; i++) grams.add(nq.slice(i, i + 2));
+    const score = t => { const n = norm(t); let k = 0; for (const g of grams) if (n.includes(g)) k++; return k; };
+    const need = Math.max(2, Math.ceil(grams.size * 0.3));
+    const hits = [];
+    for (const [path, page] of Object.entries(PAGES)) {
+      let best = 0, at = 0;
+      page.text.forEach((t, i) => { const k = score(t); if (k > best) { best = k; at = i; } });
+      const k = Math.max(best, score(page.title));
+      if (k >= need) hits.push({ k, title: page.title, url: SITE + (path === '/' ? '/' : path), snippet: page.text.slice(at, at + 2).join(' ').slice(0, 140) });
+    }
+    hits.sort((a, b) => b.k - a.k);
+    return { query: qs, results: hits.slice(0, 3).map(({ k, ...r }) => r) };
+  }
+  async function search(q, g) {
+    mark('open_page');
+    brUrl.value = `🔎 ${str(q)}`;
+    brPage.replaceChildren(h('p', { class: 'blank', text: T.c.loading }));
+    await wait(450, g);
+    let r;
+    try { r = searchSite(q); } catch (e) { brPage.replaceChildren(h('p', { class: 'blank', text: e.message })); throw e; }
+    brPage.replaceChildren(h('h3', { text: T.c.searchTitle(r.query) }), ...(r.results.length
+      ? r.results.map(x => h('div', { class: 'hit' },
+        h('button', { type: 'button', text: x.title, onclick: () => openPage(x.url, gen).catch(() => {}) }),
+        h('small', { text: x.url }), h('p', { text: x.snippet })))
+      : [h('p', { class: 'blank', text: T.c.noHits })]));
+    brPage.scrollTop = 0;
+    return r;
+  }
+
   $('#brForm').addEventListener('submit', e => { e.preventDefault(); openPage(brUrl.value, gen).catch(() => {}); });
 
   /* 電卓 */
@@ -2329,9 +2432,36 @@ const desk = (() => {
     keyBtns['⌫'].setAttribute('aria-label', T.ui.backspace);
   }
 
+  // 段階 2 の画像生成: 言葉から描くものと色を決め、キャンバスに描く
+  async function generate(prompt, g) {
+    const p = str(prompt).trim();
+    if (!p) throw new Error(T.err.promptRequired);
+    mark('draw_pixels');
+    const lc = p.toLowerCase(), img = IMAGES.find(i => i.keys.some(k => lc.includes(k)));
+    if (!img) throw new Error(T.err.noSubject(subjectList()));
+    const out = await draw(img.art.replace(/m/g, colorIn(lc) || img.color), g);
+    return { prompt: p, image: T.imgSubjects[img.id], ...out };
+  }
+  // 段階 2 と 4 で、置く道具と名札を切り替える
+  function setStage(n) {
+    const web = n === 2;
+    $('#desk').classList.toggle('two', web);
+    box.calculator.hidden = web;
+    const title = (b, emoji, label, code) => {
+      const t = b.querySelector('.tool-title');
+      t.firstChild.nodeValue = emoji + ' ';
+      t.querySelector('[data-i18n]').textContent = label;
+      t.querySelector('code').textContent = code;
+    };
+    title(box.open_page, web ? '🔎' : '🌐', web ? T.ui.webSearch : T.ui.browser, web ? 'web_search' : 'open_page');
+    title(box.draw_pixels, web ? '🖼️' : '🎨', web ? T.ui.imageGen : T.ui.pixel, web ? 'generate_image' : 'draw_pixels');
+  }
+
   function reset() { gen++; mark(null); renderPage(null); press('C'); px.fill('.'); paint(); }
   return {
-    reset, relabel,
+    reset, relabel, setStage,
+    search: q => search(q, gen),
+    generate: p => generate(p, gen),
     openPage: u => openPage(u, gen),
     calculate: e => calculate(e, gen),
     draw: a => draw(a, gen),
@@ -2779,7 +2909,8 @@ function syncSetup() {
   el.modeModel.setAttribute('aria-pressed', String(mode === 'model'));
   el.scriptBox.hidden = mode !== 'script';
   el.sceneField.hidden = !(mode === 'script' && stage >= 3);
-  el.desk.hidden = stage !== 4;
+  el.desk.hidden = stage !== 4 && stage !== 2;
+  desk.setStage(stage);
   el.stage.classList.add('arena-on');
   el.modelBox.hidden = el.modelField.hidden = el.loadBtn.hidden = mode !== 'model';
   el.sceneQuery.textContent = currentQuery();
@@ -2792,9 +2923,9 @@ function setMode(mode) {
 }
 function setStage(n) {
   state.stage = n;
-  KIT = n === 4 ? KITS.desk : KITS.shop;
+  KIT = n === 4 ? KITS.desk : n === 2 ? KITS.web : KITS.shop;
   el.query.value = n === 4 ? Q_DESK : n === 3 ? Q_MAIN : Q_SIMPLE;
-  const chips = n === 4 ? [Q_DESK, ...T.script.chipDesk] : [Q_SIMPLE, Q_MAIN, ...T.script.chipShop];
+  const chips = n === 4 ? [Q_DESK, ...T.script.chipDesk] : n === 2 ? [Q_SIMPLE, ...T.script.chipWeb] : [Q_SIMPLE, Q_MAIN, ...T.script.chipShop];
   el.chips.replaceChildren(...chips.map(q =>
     h('button', { type: 'button', text: q, onclick: () => { el.query.value = q; reset(); } })));
   el.sceneSel.replaceChildren(...(SCENES_BY_STAGE[n] || []).map((s, i) => h('option', { value: i, text: `${i + 1}. ${s.label}` })));
