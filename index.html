@@ -212,6 +212,11 @@ ul.tools span{font-size:13px;color:var(--muted)}
 .page h3{margin:0 0 4px;font-size:14px}
 .page p{margin:0 0 4px}
 .page .blank{color:var(--muted)}
+.desk.two .desk-grid{grid-template-columns:minmax(0,1fr) minmax(0,280px);align-items:start}
+@media (max-width:560px){.desk.two .desk-grid{grid-template-columns:minmax(0,1fr)}}
+.page .hit{margin:0 0 8px}
+.page .hit button{border:0;background:none;padding:0;color:var(--planner);text-decoration:underline;cursor:pointer;font-size:13px;font-weight:700;text-align:left}
+.page .hit small{display:block;font-family:var(--mono);font-size:11px;color:var(--finish)}
 .page .links{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:6px}
 .page .links button{border:0;background:none;padding:2px 0;color:var(--planner);text-decoration:underline;cursor:pointer;font-size:13px}
 .calc-disp{background:var(--paper);border-radius:6px;padding:4px 8px;text-align:right;font-family:var(--mono);display:grid;min-height:54px}
@@ -226,6 +231,92 @@ ul.tools span{font-size:13px;color:var(--muted)}
 .palette button{width:22px;height:22px;padding:0;border:1px solid var(--line);border-radius:4px;background:var(--sw);cursor:pointer}
 .palette button.erase{background:repeating-conic-gradient(#C9CFD6 0 25%,#FFFFFF 0 50%) 50%/8px 8px}
 .palette button[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:1px}
+
+/* arena (stages 3–4): the agent as one avatar walking between stations */
+.stage.arena-on{display:block}
+.stage.arena-on .left{position:static}
+.stage.arena-on .figure{display:none}
+.stage.arena-on .logwrap{margin-top:18px;max-width:820px}
+.arena{position:relative;background:var(--surface);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+.arena-scroll{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+.arena-box{position:relative;min-width:620px}
+.arena svg{display:block;width:100%;height:auto}
+.arena .prop{fill:var(--surface);stroke:var(--line);stroke-width:2;transition:stroke .3s}
+.a-wall{fill:color-mix(in srgb,var(--paper) 55%,var(--surface))}
+.a-floor{fill:color-mix(in srgb,var(--rule) 50%,var(--surface))}
+.a-base{stroke:var(--line);stroke-width:1.5}
+.a-label{fill:var(--muted);font:500 15px var(--sans);text-anchor:middle}
+.a-title{fill:var(--ink);font:700 14px var(--sans)}
+.a-sub{fill:var(--muted);font:500 13px var(--sans);text-anchor:end}
+.a-emoji{text-anchor:middle}
+.knob{fill:var(--line)}
+.st.on .prop{stroke:var(--step);stroke-width:3}
+.st.on .a-label{fill:var(--step);font-weight:700}
+.note rect{fill:var(--surface);stroke:var(--line);stroke-width:1.5;transition:fill .3s,stroke .3s}
+.note .nm{font:12.5px var(--mono);fill:var(--ink)}
+.note .mk{font:700 16px var(--sans);text-anchor:end}
+.note.run rect{stroke:var(--executor);stroke-width:2.5;fill:color-mix(in srgb,var(--executor) 14%,var(--surface))}
+.note.ok .mk{fill:var(--finish)} .note.ng .mk{fill:var(--error)}
+.note.ng rect{stroke:var(--error)}
+.note.bad .nm{fill:var(--error);text-decoration:line-through}
+.notes.old{opacity:.35}
+.stamp circle{fill:color-mix(in srgb,var(--surface) 70%,transparent);stroke-width:3}
+.stamp text{font:700 17px var(--sans);text-anchor:middle}
+.stamp.ok circle{stroke:var(--finish)} .stamp.ok text{fill:var(--finish)}
+.stamp.ng circle{stroke:var(--error)} .stamp.ng text{fill:var(--error)}
+.slot-bg{fill:transparent;stroke:transparent;stroke-width:2.5;transition:fill .2s,stroke .2s}
+.slot.on .slot-bg{fill:color-mix(in srgb,var(--step) 16%,transparent);stroke:var(--step)}
+.slot.taken .a-emoji{opacity:.2}
+.st.empty .prop{stroke-dasharray:6 5}
+.a-none{fill:var(--muted);font:500 15px var(--sans);text-anchor:middle}
+.flag.plain polygon{fill:var(--planner)}
+.paper{fill:var(--surface);stroke:var(--tools);stroke-width:1.5}
+.paper.err{stroke:var(--error);fill:color-mix(in srgb,var(--error) 14%,var(--surface))}
+.pole{stroke:var(--ink);stroke-width:3;stroke-linecap:round}
+.flag{transform:translateY(112px);transition:transform .9s cubic-bezier(.3,1.4,.5,1)}
+.flag polygon{fill:var(--line)}
+.flag.up{transform:none} .flag.ok polygon{fill:var(--finish)} .flag.ng{transform:translateY(60px)} .flag.ng polygon{fill:var(--error)}
+.av-body,.av-head,.leg,.av-arm{fill:var(--surface);stroke:var(--ink);stroke-width:2.5}
+.av-visor{fill:#1B2430}
+.av-band,.av-light{fill:var(--step);transition:fill .3s}
+.av-ant{stroke:var(--ink);stroke-width:2.5}
+.eye{fill:#9FF3E8} .eye-l{fill:none;stroke:#9FF3E8;stroke-width:2.6;stroke-linecap:round}
+.av-shadow{fill:var(--ink);opacity:.13}
+.av-tag{font:700 14px var(--sans);fill:var(--step);text-anchor:middle}
+.av-item{font-size:26px;text-anchor:middle;display:none}
+.avatar.holding .av-item{display:inline}
+.leg,.av-arm{transform-box:fill-box;transform-origin:50% 0}
+.avatar.holding .av-arm.r{transform:rotate(-38deg)}
+.avatar.walking .leg.l{animation:a-step .36s ease-in-out infinite}
+.avatar.walking .leg.r{animation:a-step .36s ease-in-out infinite;animation-delay:-.18s}
+.avatar.walking .av-bob{animation:a-bob .36s ease-in-out infinite}
+.avatar.think .av-light{animation:a-pulse .9s ease-in-out infinite}
+.avatar.work .av-arm.r{animation:a-hammer .45s ease-in-out infinite}
+.avatar.happy .av-bob{animation:a-hop .45s ease-out 2}
+.avatar.surprise .av-bob{animation:a-jolt .35s ease-out 1}
+.avatar.sad .av-bob{transform:translateY(3px)}
+@keyframes a-step{0%,100%{transform:rotate(-16deg)}50%{transform:rotate(16deg)}}
+@keyframes a-bob{50%{transform:translateY(-4px)}}
+@keyframes a-pulse{50%{opacity:.25}}
+@keyframes a-hammer{50%{transform:rotate(-60deg)}}
+@keyframes a-hop{40%{transform:translateY(-16px)}}
+@keyframes a-jolt{30%{transform:translateY(-8px)}}
+.bubble{--bc:var(--ink);position:absolute;left:0;top:0;max-width:min(340px,70%);padding:8px 13px;background:var(--surface);color:var(--ink);
+  border:2px solid var(--bc);border-radius:14px;font-size:14px;line-height:1.55;box-shadow:0 4px 14px rgba(0,0,0,.12);z-index:2;
+  overflow-wrap:anywhere;animation:a-pop .18s ease-out}
+.bubble::after{content:"";position:absolute;left:clamp(16px,var(--tail,50%),calc(100% - 16px));bottom:-8px;width:13px;height:13px;background:var(--surface);
+  border-right:2px solid var(--bc);border-bottom:2px solid var(--bc);transform:translateX(-50%) rotate(45deg)}
+.bubble.think{border-style:dashed;color:var(--muted)}
+.bubble.think::after{width:10px;height:10px;bottom:-15px;border:2px dashed var(--bc);border-radius:50%;transform:translateX(-50%)}
+@keyframes a-pop{from{transform:scale(.92);opacity:0}}
+.arena-play{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:12px;max-width:calc(100% - 24px);
+  padding:12px 22px 12px 12px;border:0;border-radius:999px;background:var(--ink);color:var(--paper);font-weight:700;font-size:17px;line-height:1.4;
+  text-align:left;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:3}
+.arena-play b{flex:none;display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--paper);color:var(--ink);font-size:15px}
+.arena-play small{display:block;font-weight:400;font-size:12px;opacity:.8}
+.arena-play:hover{transform:translate(-50%,-50%) scale(1.03)}
+@media (max-width:560px){.arena-play{top:40%;width:max-content;max-width:calc(100% - 32px);padding:8px 16px 8px 8px;font-size:15px;border-radius:999px}.arena-play b{width:34px;height:34px}.arena-play small{display:none}}
+@media (prefers-reduced-motion:reduce){.arena *{animation:none !important}.bubble{animation:none}}
 
 footer{margin-top:28px;font-size:13px;color:var(--muted)}
 footer a{color:inherit}
@@ -279,12 +370,18 @@ footer a{color:inherit}
 
   <div class="stage">
     <div class="left">
+      <div class="arena" id="arena">
+        <div class="arena-scroll" id="arenaScroll">
+          <div class="arena-box" id="arenaBox"><div class="bubble" id="arenaBubble" hidden></div></div>
+        </div>
+        <button type="button" class="arena-play" id="arenaPlay" hidden></button>
+      </div>
       <div class="figure">
         <div id="diagram"></div>
         <div class="legend"><span><i></i><span data-i18n="legendSolid">実線は係（部品）</span></span><span><i class="d"></i><span data-i18n="legendDashed">破線は受け渡されるデータ</span></span></div>
       </div>
       <section class="desk" id="desk" data-i18n-aria="deskTitle" aria-label="作業台" hidden>
-        <p class="desk-head"><b data-i18n="deskTitle">作業台</b><span data-i18n="deskNote">エージェントが道具として操作します。手で触ることもできます。</span></p>
+        <p class="desk-head"><b data-i18n="deskTitle">作業台</b><span data-i18n="deskNote">AI が道具として操作します。手で触ることもできます。</span></p>
         <div class="desk-grid">
           <div class="tool-box browser" id="boxBrowser">
             <p class="tool-title">🌐 <span data-i18n="browser">ブラウザ</span><code>open_page</code></p>
@@ -380,13 +477,14 @@ const I18N = {
       modeLabel: '動かし方', modeScript: '台本', modeModel: 'ブラウザ内モデル',
       scene: '場面', model: 'モデル', loadBtn: 'モデルを読み込む', queryPrefix: '質問: ', query: '質問',
       legendSolid: '実線は係（部品）', legendDashed: '破線は受け渡されるデータ',
-      deskTitle: '作業台', deskNote: 'エージェントが道具として操作します。手で触ることもできます。',
+      deskTitle: '作業台', deskNote: 'AI が道具として操作します。手で触ることもできます。',
       browser: 'ブラウザ', calc: '電卓', pixel: 'ドット絵', canvasAria: '16×16 のドット絵キャンバス',
       next: '次のステップ', auto: '自動で進める', stop: '止める', reset: '最初から',
       logHint: '横にスライドすると前のステップを見返せます。図もそのステップに切り替わります。',
       logAria: 'ステップの記録',
-      footer: `図と用語は Chip Huyen ${FOOTER_LINK}（2025）の図 6-9 をもとにしています。店も商品も売上も、段階 4 のサイト（shop.example）も架空のデータで、店の「今日」は 2030-09-13 に固定しています。`,
+      footer: `図と用語は Chip Huyen ${FOOTER_LINK}（2025）の図 6-9 をもとにしています。店も商品も売上も、段階 2・4 の Web（shop.example）も架空のデータで、店の「今日」は 2030-09-13 に固定しています。`,
       eraser: '消しゴム', backspace: '1文字消す',
+      imageGen: '画像生成', webSearch: 'Web 検索',
     },
     products: [['旅するマグカップ', '食器'], ['猫の付箋', '文具'], ['そらいろ手帳', '文具'], ['ふわふわ靴下', '衣類'],
       ['夜ふかしブレンド', '食品'], ['木のしおり', '文具'], ['雨の日トート', 'バッグ'], ['星空ノート', '文具']],
@@ -411,6 +509,8 @@ const I18N = {
       noDots: '色のついたドットが1つもありません',
       noTool: t => `「${t}」という道具は一覧にありません`,
       missingArgs: l => `引数が足りません: ${l}`, extraArgs: l => `この道具にない引数があります: ${l}`,
+      queryRequired: 'query を指定してください', promptRequired: 'prompt を指定してください',
+      noSubject: list => `この練習用の画像生成で作れるのは ${list} だけです`,
     },
     tools: {
       get_today_date: '今日の日付を返す',
@@ -422,6 +522,8 @@ const I18N = {
       desk_calculator: '電卓のキーを押して式を計算する', desk_expression: '数字と + - * / ( ) . だけの式',
       draw_pixels: `ドット絵キャンバス（${PIX}×${PIX}）に絵を描く。前の絵は消える`,
       art: legend => `絵。1行を${PIX}文字までにして、行を / で区切る（${PIX}行まで）。文字の意味: ${legend}`,
+      web_search: `Web を検索し、ヒットしたページの題名・URL・抜き出しを返す（このデモの Web は架空の店のサイト ${SITE}/ だけ）`, query: '検索する言葉',
+      generate_image: subs => `言葉で指示した画像を作り、キャンバスに表示する（練習用。作れるのは ${subs} だけ）`, prompt: '作りたい画像の説明（例: 赤いハート）',
     },
     kits: {
       shop: {
@@ -532,6 +634,11 @@ ${inv}
       qDesk: 'お店のサイトで今月のおすすめ商品を調べて、3個買うといくらか計算し、その商品をドット絵で描いて',
       chipShop: ['先週の売上トップ2の価格を合計するといくら？'],
       chipDesk: ['お知らせを見て、星空ノートを5冊フェアの値段で買うといくらか計算して', '赤いハートをドット絵で描いて'],
+      webQuery: n => `${n} 価格`,
+      chipWeb: ['今月のおすすめ商品は？', '赤いハートの画像を作って'],
+      webScenes: { search: '情報を調べる（Web 検索）', image: '画像を作る（画像生成）' },
+      qImage: '赤いハートの画像を作って', imagePrompt: '赤いハート',
+      imageAnswer: p => `「${p}」の画像を作りました。下のキャンバスに表示しています。`,
       badge: '台本（モデルの代役）',
       goodThought: '「先週」の範囲を決めるには今日の日付が要る。売上1位の商品名がわかれば、その価格を引ける。',
       goodAnswer: (a, b, name, price) => `先週（${a}〜${b}）いちばん売れたのは「${name}」で、価格は ${price}です。`,
@@ -593,11 +700,27 @@ ${inv}
     ],
     stageDesc: [
       '質問を受け取り、学習した知識だけで答えの文を作ります。',
-      '道具の一覧を渡されたモデルは、道具を呼び、その出力を読んでから答えを作ります。',
+      '道具の一覧（Web 検索と画像生成）を渡されたモデルは、道具を1回呼び、その出力を読んでから答えを作ります。',
       '道具を何度も使う質問では、計画を立て、点検し、実行し、結果を確かめます。',
       'エージェントの形は段階 3 と同じまま、道具を作業台のブラウザ・電卓・ドット絵キャンバスに入れ替えます。道具を呼ぶと、作業台が実際に動きます。',
     ],
+    imgSubjects: { mug: 'マグカップ', heart: 'ハート', star: '星', cat: '猫', notebook: 'ノート' },
+    arena: {
+      aria: 'エージェントが持ち場を歩いて回り、計画・点検・実行・確認をするステージ',
+      st: { query: '入口', planner: '計画の机', board: '計画ボード', evaluator: '点検台', shelf: '道具の棚', executor: '作業台', tray: '出力トレイ', finish: 'ゴール' },
+      play: 'エージェントにまかせて見る', playNote: '自分で計画し、点検し、道具を使います',
+      got: '質問が来た。', look: n => `使える道具は ${n} つ。この中から選ぶ。`,
+      think: '考え中…', planned: n => `${n} ステップの計画にしよう。`,
+      recv: '計画を受け取った。順に道具を使う。', pick: '引数を決めて呼ぶ…',
+      judging: 'この出力で答えられるかな…', replan: '計画を立て直そう。', stop: 'ここで打ち切ります。',
+      attempt: n => `${n}回目`,
+      // 段階 1・2（エージェントになる前のモデル）で使う
+      st2: { planner: 'モデルの机', finish: '答え' }, noTools: '道具はまだない',
+      waitTool: '道具を動かすのはプログラム。結果を待つ…', readOut: '出力を読もう。',
+      play2: '動かして見る', playNote2: '質問を受け取ったモデルの動きを見ます',
+    },
     c: {
+      searchTitle: q => `「${q}」の検索結果`, noHits: '見つかりませんでした。',
       blank: 'まだ何も開いていません。', loading: '読み込み中…',
       showPrompt: 'モデルに渡す指示文を見る', thinking: 'モデルが考えています…',
       modelBadge: 'モデルが生成', codeRun: 'コードで実行', codeJudge: 'コードで判定',
@@ -613,11 +736,11 @@ ${inv}
       s1ModelLead: '知っていることだけで文を作ります。知らないことを聞かれると、答えられないか、もっともらしい内容を作ってしまいます。',
       s1Next: '店のデータを調べる手段があれば、当て推量をしなくて済みます。次の段階では、モデルに道具を渡します。',
       s2QueryTitle: '質問と、道具の一覧が届く',
-      s2QueryLead: '段階 1 との違いは、道具の一覧が一緒に渡されることです。道具は、店のデータを調べたり計算したりする関数です。',
+      s2QueryLead: '段階 1 との違いは、道具の一覧が一緒に渡されることです。ここでは、生成AIのサービスによくある Web 検索と画像生成を道具にします。',
       s2PickTitle: '道具の呼び出しを書く',
       s2PickLead: 'モデルは道具を自分では動かせません。「この道具を、この引数で呼んでほしい」という文を書くだけです。',
       s2RunTitle: '道具が実行される',
-      s2RunLead: 'プログラムが呼び出しの文を読み取り、実際の関数を動かします。ここはモデルの外で起きます。',
+      s2RunLead: 'プログラムが呼び出しの文を読み取り、実際の道具を動かします。ここはモデルの外で起きます。下の作業台で、検索や画像の生成が実際に動きます。',
       s2AnswerTitle: '出力を読んで、答えを作る',
       s2AnswerLead: '道具の出力が、質問と一緒にモデルへ戻されます。モデルはそれを読んで答えの文を作ります。',
       s2ToolErr: '道具がエラーになったので、答えられません。',
@@ -678,13 +801,14 @@ ${inv}
       modeLabel: 'How to run', modeScript: 'Script', modeModel: 'In-browser model',
       scene: 'Scene', model: 'Model', loadBtn: 'Load model', queryPrefix: 'Question: ', query: 'Question',
       legendSolid: 'Solid: components', legendDashed: 'Dashed: data passed along',
-      deskTitle: 'Workbench', deskNote: 'The agent operates these as tools. You can also use them by hand.',
+      deskTitle: 'Workbench', deskNote: 'The AI operates these as tools. You can also use them by hand.',
       browser: 'Browser', calc: 'Calculator', pixel: 'Pixel art', canvasAria: '16×16 pixel-art canvas',
       next: 'Next step', auto: 'Auto-play', stop: 'Stop', reset: 'Restart',
       logHint: 'Swipe sideways to look back at earlier steps. The diagram switches to that step too.',
       logAria: 'Step log',
-      footer: `The diagram and terms are based on Figure 6-9 of Chip Huyen’s ${FOOTER_LINK} (2025). The shop, products, sales, and the stage 4 site (shop.example) are all fictional, and the shop’s “today” is fixed at 2030-09-13.`,
+      footer: `The diagram and terms are based on Figure 6-9 of Chip Huyen’s ${FOOTER_LINK} (2025). The shop, products, sales, and the web in stages 2 and 4 (shop.example) are all fictional, and the shop’s “today” is fixed at 2030-09-13.`,
       eraser: 'Eraser', backspace: 'Delete one character',
+      imageGen: 'Image generation', webSearch: 'Web search',
     },
     products: [['Travel Mug', 'Tableware'], ['Cat Sticky Notes', 'Stationery'], ['Sky-Blue Planner', 'Stationery'], ['Fluffy Socks', 'Clothing'],
       ['Night Owl Blend', 'Food'], ['Wooden Bookmark', 'Stationery'], ['Rainy Day Tote', 'Bags'], ['Starry Sky Notebook', 'Stationery']],
@@ -709,6 +833,8 @@ ${inv}
       noDots: 'There are no colored dots',
       noTool: t => `There is no tool named "${t}" on the list`,
       missingArgs: l => `Missing arguments: ${l}`, extraArgs: l => `Arguments this tool does not take: ${l}`,
+      queryRequired: 'Specify query', promptRequired: 'Specify prompt',
+      noSubject: list => `This practice image generator can only make ${list}`,
     },
     tools: {
       get_today_date: 'Returns today’s date',
@@ -720,6 +846,8 @@ ${inv}
       desk_calculator: 'Presses the calculator keys to evaluate an expression', desk_expression: 'An expression using only digits and + - * / ( ) .',
       draw_pixels: `Draws a picture on the pixel-art canvas (${PIX}×${PIX}). The previous picture is erased`,
       art: legend => `The picture. Each row is up to ${PIX} characters, rows are separated by / (up to ${PIX} rows). Characters: ${legend}`,
+      web_search: `Searches the web and returns the title, URL, and excerpt of matching pages (in this demo, the web is only the fictional shop site ${SITE}/)`, query: 'Words to search for',
+      generate_image: subs => `Creates an image from a text description and shows it on the canvas (a practice version that can only make ${subs})`, prompt: 'Description of the image (e.g. a red heart)',
     },
     kits: {
       shop: {
@@ -830,6 +958,11 @@ Tool output: ${output}`,
       qDesk: 'Find this month’s featured product on the shop’s site, calculate the cost of buying 3, and draw that product as pixel art',
       chipShop: ['What is the total price of last week’s top 2 sellers?'],
       chipDesk: ['Check the news and calculate the cost of 5 Starry Sky Notebooks at the fair price', 'Draw a red heart in pixel art'],
+      webQuery: n => `${n} price`,
+      chipWeb: ['What is this month’s pick?', 'Make an image of a red heart'],
+      webScenes: { search: 'Look something up (web search)', image: 'Make an image (image generation)' },
+      qImage: 'Make an image of a red heart', imagePrompt: 'a red heart',
+      imageAnswer: p => `I made an image of ${p}. It is shown on the canvas below.`,
       badge: 'Script (stand-in for the model)',
       goodThought: 'Setting the range for "last week" needs today’s date. Once I know the name of the top seller, I can look up its price.',
       goodAnswer: (a, b, name, price) => `The best-selling product last week (${a} to ${b}) was the ${name}, and its price is ${price}.`,
@@ -891,11 +1024,26 @@ Tool output: ${output}`,
     ],
     stageDesc: [
       'The model receives the question and writes an answer using only what it learned in training.',
-      'Given a list of tools, the model calls a tool, reads its output, and then writes the answer.',
+      'Given a list of tools (web search and image generation), the model calls a tool once, reads its output, and then writes the answer.',
       'For questions that need several tool calls, the agent makes a plan, checks it, executes it, and checks the results.',
       'The agent keeps the same shape as in stage 3, but its tools are swapped for the browser, calculator, and pixel-art canvas on the workbench. Calling a tool actually moves the workbench.',
     ],
+    imgSubjects: { mug: 'a mug', heart: 'a heart', star: 'a star', cat: 'a cat', notebook: 'a notebook' },
+    arena: {
+      aria: 'A stage where the agent walks between stations to plan, check, run tools, and verify',
+      st: { query: 'Entrance', planner: 'Planning desk', board: 'Plan board', evaluator: 'Check table', shelf: 'Tool shelf', executor: 'Workbench', tray: 'Output tray', finish: 'Goal' },
+      play: 'Let the agent run', playNote: 'It plans, checks, and uses tools on its own',
+      got: 'A question came in.', look: n => `I have ${n} tools. I will choose from these.`,
+      think: 'Thinking…', planned: n => `A plan with ${n} step${n === 1 ? '' : 's'}.`,
+      recv: 'Got the plan. Calling the tools in order.', pick: 'Deciding the arguments…',
+      judging: 'Can I answer with these outputs?', replan: 'I will make a new plan.', stop: 'I will stop here.',
+      attempt: n => `Try ${n}`,
+      st2: { planner: 'Model desk', finish: 'Answer' }, noTools: 'No tools yet',
+      waitTool: 'A program runs the tool. Waiting for the result…', readOut: 'Let me read the output.',
+      play2: 'Watch it run', playNote2: 'See what the model does with the question',
+    },
     c: {
+      searchTitle: q => `Results for “${q}”`, noHits: 'No results.',
       blank: 'Nothing has been opened yet.', loading: 'Loading…',
       showPrompt: 'Show the prompt given to the model', thinking: 'The model is thinking…',
       modelBadge: 'Generated by the model', codeRun: 'Run by code', codeJudge: 'Judged by code',
@@ -911,11 +1059,11 @@ Tool output: ${output}`,
       s1ModelLead: 'It writes a sentence from what it already knows. Asked about something it doesn’t know, it either can’t answer or makes up something plausible.',
       s1Next: 'With a way to look up the shop’s data, it would not have to guess. In the next stage, we give the model tools.',
       s2QueryTitle: 'The question and a list of tools arrive',
-      s2QueryLead: 'The difference from stage 1 is that a list of tools comes along with the question. Tools are functions that look up the shop’s data or do calculations.',
+      s2QueryLead: 'The difference from stage 1 is that a list of tools comes along with the question. Here the tools are web search and image generation, which many generative AI services offer.',
       s2PickTitle: 'Writes a tool call',
       s2PickLead: 'The model cannot run tools by itself. It only writes text saying "please call this tool with these arguments."',
       s2RunTitle: 'The tool runs',
-      s2RunLead: 'The program reads the call text and runs the actual function. This happens outside the model.',
+      s2RunLead: 'The program reads the call text and runs the actual tool. This happens outside the model. On the workbench below, the search or image generation actually runs.',
       s2AnswerTitle: 'Reads the output and writes the answer',
       s2AnswerLead: 'The tool output is sent back to the model along with the question. The model reads it and writes the answer.',
       s2ToolErr: 'The tool returned an error, so I can’t answer.',
@@ -976,13 +1124,14 @@ Tool output: ${output}`,
       modeLabel: '실행 방식', modeScript: '대본', modeModel: '브라우저 내 모델',
       scene: '장면', model: '모델', loadBtn: '모델 불러오기', queryPrefix: '질문: ', query: '질문',
       legendSolid: '실선은 구성 요소', legendDashed: '점선은 주고받는 데이터',
-      deskTitle: '작업대', deskNote: '에이전트가 도구로 조작합니다. 직접 만져 볼 수도 있습니다.',
+      deskTitle: '작업대', deskNote: 'AI가 도구로 조작합니다. 직접 만져 볼 수도 있습니다.',
       browser: '브라우저', calc: '계산기', pixel: '도트 그림', canvasAria: '16×16 도트 그림 캔버스',
       next: '다음 스텝', auto: '자동으로 진행', stop: '멈추기', reset: '처음부터',
       logHint: '옆으로 밀면 이전 스텝을 다시 볼 수 있습니다. 그림도 그 스텝으로 바뀝니다.',
       logAria: '스텝 기록',
-      footer: `그림과 용어는 Chip Huyen의 ${FOOTER_LINK}(2025) 그림 6-9를 바탕으로 했습니다. 가게도 상품도 매출도, 4단계의 사이트(shop.example)도 가상의 데이터이며, 가게의 ‘오늘’은 2030-09-13으로 고정되어 있습니다.`,
+      footer: `그림과 용어는 Chip Huyen의 ${FOOTER_LINK}(2025) 그림 6-9를 바탕으로 했습니다. 가게도 상품도 매출도, 2·4단계의 웹(shop.example)도 가상의 데이터이며, 가게의 ‘오늘’은 2030-09-13으로 고정되어 있습니다.`,
       eraser: '지우개', backspace: '한 글자 지우기',
+      imageGen: '이미지 생성', webSearch: '웹 검색',
     },
     products: [['여행하는 머그컵', '식기'], ['고양이 포스트잇', '문구'], ['하늘색 수첩', '문구'], ['폭신폭신 양말', '의류'],
       ['올빼미 블렌드', '식품'], ['나무 책갈피', '문구'], ['비 오는 날 토트백', '가방'], ['별하늘 노트', '문구']],
@@ -1007,6 +1156,8 @@ Tool output: ${output}`,
       noDots: '색이 있는 도트가 하나도 없습니다',
       noTool: t => `"${t}" 도구는 목록에 없습니다`,
       missingArgs: l => `인수가 부족합니다: ${l}`, extraArgs: l => `이 도구에 없는 인수가 있습니다: ${l}`,
+      queryRequired: 'query를 지정해 주세요', promptRequired: 'prompt를 지정해 주세요',
+      noSubject: list => `이 연습용 이미지 생성으로 만들 수 있는 것은 ${list}뿐입니다`,
     },
     tools: {
       get_today_date: '오늘 날짜를 돌려준다',
@@ -1018,6 +1169,8 @@ Tool output: ${output}`,
       desk_calculator: '계산기 키를 눌러 식을 계산한다', desk_expression: '숫자와 + - * / ( ) .만 쓴 식',
       draw_pixels: `도트 그림 캔버스(${PIX}×${PIX})에 그림을 그린다. 이전 그림은 지워진다`,
       art: legend => `그림. 한 행은 ${PIX}글자까지, 행은 /로 구분한다(${PIX}행까지). 문자의 의미: ${legend}`,
+      web_search: `웹을 검색해, 걸린 페이지의 제목·URL·발췌를 돌려준다(이 데모의 웹은 가상의 가게 사이트 ${SITE}/ 뿐)`, query: '검색할 말',
+      generate_image: subs => `말로 지시한 이미지를 만들어 캔버스에 표시한다(연습용. 만들 수 있는 것은 ${subs}뿐)`, prompt: '만들 이미지의 설명(예: 빨간 하트)',
     },
     kits: {
       shop: {
@@ -1128,6 +1281,11 @@ ${inv}
       qDesk: '가게 사이트에서 이번 달 추천 상품을 찾아보고, 3개 사면 얼마인지 계산한 뒤, 그 상품을 도트 그림으로 그려 줘',
       chipShop: ['지난주 판매 상위 2개 상품의 가격을 합하면 얼마?'],
       chipDesk: ['알림을 보고, 별하늘 노트 5권을 페어 가격으로 사면 얼마인지 계산해 줘', '빨간 하트를 도트 그림으로 그려 줘'],
+      webQuery: n => `${n} 가격`,
+      chipWeb: ['이번 달 추천 상품은?', '빨간 하트 이미지를 만들어 줘'],
+      webScenes: { search: '정보를 찾기(웹 검색)', image: '이미지 만들기(이미지 생성)' },
+      qImage: '빨간 하트 이미지를 만들어 줘', imagePrompt: '빨간 하트',
+      imageAnswer: p => `"${p}" 이미지를 만들었습니다. 아래 캔버스에 표시하고 있습니다.`,
       badge: '대본(모델 대역)',
       goodThought: '"지난주" 범위를 정하려면 오늘 날짜가 필요하다. 판매 1위 상품명을 알면 그 가격을 찾을 수 있다.',
       goodAnswer: (a, b, name, price) => `지난주(${a}~${b}) 가장 많이 팔린 상품은 "${name}"이고, 가격은 ${price}입니다.`,
@@ -1189,11 +1347,26 @@ ${inv}
     ],
     stageDesc: [
       '질문을 받아, 학습한 지식만으로 답의 문장을 만듭니다.',
-      '도구 목록을 받은 모델은 도구를 부르고, 그 출력을 읽은 뒤 답을 만듭니다.',
+      '도구 목록(웹 검색과 이미지 생성)을 받은 모델은 도구를 한 번 부르고, 그 출력을 읽은 뒤 답을 만듭니다.',
       '도구를 여러 번 써야 하는 질문에서는 계획을 세우고, 점검하고, 실행하고, 결과를 확인합니다.',
       '에이전트의 형태는 3단계 그대로 두고, 도구를 작업대의 브라우저·계산기·도트 그림 캔버스로 바꿉니다. 도구를 부르면 작업대가 실제로 움직입니다.',
     ],
+    imgSubjects: { mug: '머그컵', heart: '하트', star: '별', cat: '고양이', notebook: '노트' },
+    arena: {
+      aria: '에이전트가 자리를 옮겨 다니며 계획·점검·실행·확인을 하는 무대',
+      st: { query: '입구', planner: '계획 책상', board: '계획 보드', evaluator: '점검대', shelf: '도구 선반', executor: '작업대', tray: '출력 트레이', finish: '골' },
+      play: '에이전트에게 맡기고 보기', playNote: '스스로 계획하고, 점검하고, 도구를 씁니다',
+      got: '질문이 왔다.', look: n => `쓸 수 있는 도구는 ${n}개. 이 중에서 고른다.`,
+      think: '생각 중…', planned: n => `${n}단계 계획으로 하자.`,
+      recv: '계획을 받았다. 차례로 도구를 쓴다.', pick: '인수를 정해서 호출…',
+      judging: '이 출력으로 답할 수 있을까…', replan: '계획을 다시 세우자.', stop: '여기서 멈춥니다.',
+      attempt: n => `${n}번째`,
+      st2: { planner: '모델 책상', finish: '답' }, noTools: '아직 도구가 없다',
+      waitTool: '도구를 움직이는 건 프로그램. 결과를 기다린다…', readOut: '출력을 읽자.',
+      play2: '움직여서 보기', playNote2: '질문을 받은 모델의 움직임을 봅니다',
+    },
     c: {
+      searchTitle: q => `“${q}” 검색 결과`, noHits: '찾지 못했습니다.',
       blank: '아직 아무것도 열지 않았습니다.', loading: '불러오는 중…',
       showPrompt: '모델에 건네는 지시문 보기', thinking: '모델이 생각하고 있습니다…',
       modelBadge: '모델이 생성', codeRun: '코드로 실행', codeJudge: '코드로 판정',
@@ -1209,11 +1382,11 @@ ${inv}
       s1ModelLead: '아는 것만으로 문장을 만듭니다. 모르는 것을 물으면 답하지 못하거나, 그럴듯한 내용을 지어내 버립니다.',
       s1Next: '가게 데이터를 조사할 수단이 있으면 짐작하지 않아도 됩니다. 다음 단계에서는 모델에게 도구를 줍니다.',
       s2QueryTitle: '질문과 도구 목록이 도착한다',
-      s2QueryLead: '1단계와 다른 점은 도구 목록이 함께 건네진다는 것입니다. 도구는 가게 데이터를 조사하거나 계산하는 함수입니다.',
+      s2QueryLead: '1단계와 다른 점은 도구 목록이 함께 건네진다는 것입니다. 여기서는 생성형 AI 서비스에 흔한 웹 검색과 이미지 생성을 도구로 씁니다.',
       s2PickTitle: '도구 호출을 쓴다',
       s2PickLead: '모델은 도구를 스스로 움직일 수 없습니다. "이 도구를 이 인수로 불러 달라"는 문장을 쓸 뿐입니다.',
       s2RunTitle: '도구가 실행된다',
-      s2RunLead: '프로그램이 호출 문장을 읽어 내고 실제 함수를 움직입니다. 이 일은 모델 바깥에서 일어납니다.',
+      s2RunLead: '프로그램이 호출 문장을 읽어 내고 실제 도구를 움직입니다. 이 일은 모델 바깥에서 일어납니다. 아래 작업대에서 검색이나 이미지 생성이 실제로 움직입니다.',
       s2AnswerTitle: '출력을 읽고 답을 만든다',
       s2AnswerLead: '도구의 출력이 질문과 함께 모델로 돌아갑니다. 모델은 그것을 읽고 답의 문장을 만듭니다.',
       s2ToolErr: '도구에서 오류가 났으므로 답할 수 없습니다.',
@@ -1321,7 +1494,7 @@ function fetchProductInfo({ product_name }) {
 }
 
 // 道具の一式と、それに合わせた指示文の決まり。言語と段階で切り替える。
-let SHOP_TOOLS, DESK_TOOLS, KITS, KIT;
+let SHOP_TOOLS, WEB_TOOLS, DESK_TOOLS, KITS, KIT;
 function buildTools() {
   const d = T.tools;
   SHOP_TOOLS = {
@@ -1348,7 +1521,16 @@ function buildTools() {
       run: ({ art }) => desk.draw(art),
     },
   };
-  KITS = { shop: { tools: SHOP_TOOLS, ...T.kits.shop }, desk: { tools: DESK_TOOLS, ...T.kits.desk } };
+  /* 段階 2 の道具: 生成AIのサービスによくある Web 検索と画像生成。中身は作業台のブラウザとキャンバスを使う */
+  WEB_TOOLS = {
+    web_search: { emoji: '🔎', desc: d.web_search, params: { query: { type: 'string', desc: d.query } }, run: ({ query }) => desk.search(query) },
+    generate_image: { emoji: '🖼️', desc: d.generate_image(subjectList()), params: { prompt: { type: 'string', desc: d.prompt } }, run: ({ prompt }) => desk.generate(prompt) },
+  };
+  KITS = {
+    shop: { tools: SHOP_TOOLS, ...T.kits.shop },
+    web: { tools: WEB_TOOLS, toolsLead: '', runNote: '', planRules: [], argRules: [], planExamples: '' },
+    desk: { tools: DESK_TOOLS, ...T.kits.desk },
+  };
   KIT = KITS.shop;
 }
 const sig = name => `${name}(${Object.keys(KIT.tools[name].params).join(', ')})`;
@@ -1392,7 +1574,7 @@ const judgePrompt = ctx => T.prompt.judge({ query: ctx.query, history: historyTe
 const answerOnlyPrompt = ctx => T.prompt.answerOnly(ctx.query);
 const pickPrompt = ctx => T.prompt.pick({
   inv: inventory(), query: ctx.query,
-  example: JSON.stringify({ tool: 'fetch_product_info', args: { product_name: PRODUCTS[7].name } }),
+  example: JSON.stringify({ tool: 'web_search', args: { query: T.script.webQuery(PRODUCTS[7].name) } }),
 });
 const answerWithPrompt = ctx => T.prompt.answerWith({ query: ctx.query, call: fmtCall(ctx.call.tool, ctx.call.args), output: JSON.stringify(ctx.output) });
 const PICK_SCHEMA = { type: 'object', properties: { tool: { type: 'string' }, args: { type: 'object' } }, required: ['tool', 'args'] };
@@ -1422,8 +1604,31 @@ const MUG_ART = [
   '...kkkkkkkk.....',
   '................',
 ].join('/');
+/* 段階 2 の画像生成（練習用）: 言葉の中から描けるものを見つけ、用意した絵を描く。m は主な色に置きかえる */
+const IMAGES = [
+  { id: 'mug', color: 'b', keys: ['マグ', 'カップ', 'mug', 'cup', '머그', '컵'], art: MUG_ART.replace(/b/g, 'm') },
+  { id: 'heart', color: 'r', keys: ['ハート', 'heart', '하트'], art: [
+    '................', '................', '...mmm....mmm...', '..mmmmm..mmmmm..', '.mmmmmmmmmmmmmm.', '.mmmmmmmmmmmmmm.',
+    '.mmmmmmmmmmmmmm.', '..mmmmmmmmmmmm..', '...mmmmmmmmmm...', '....mmmmmmmm....', '.....mmmmmm.....', '......mmmm......', '.......mm.......'].join('/') },
+  { id: 'star', color: 'y', keys: ['星', 'スター', 'star', '별'], art: [
+    '................', '.......mm.......', '.......mm.......', '......mmmm......', '......mmmm......', 'mmmmmmmmmmmmmmmm', '.mmmmmmmmmmmmmm.',
+    '...mmmmmmmmmm...', '....mmmmmmmm....', '....mmmmmmmm....', '...mmmmmmmmmm...', '...mmmm..mmmm...', '..mmm......mmm..', '..mm........mm..'].join('/') },
+  { id: 'cat', color: 'a', keys: ['猫', 'ねこ', 'ネコ', 'cat', '고양이'], art: [
+    '................', '..m.........m...', '..mm.......mm...', '..mmm.....mmm...', '..mmmmmmmmmmm...', '..mmmmmmmmmmm...', '..mmkmmmmmkmm...',
+    '..mmmmmmmmmmm...', '..mmmmmpmmmmm...', '...mmmmmmmmm....', '....mmmmmmm.....', '...mmmmmmmmm....', '..mmmmmmmmmmm...', '..mmmmmmmmmmm..m', '..mmmmmmmmmmmmm.'].join('/') },
+  { id: 'notebook', color: 's', keys: ['手帳', 'ノート', 'notebook', 'planner', 'note', '수첩', '노트'], art: [
+    '................', '...kkkkkkkkkk...', '...kmmmmmmmmk...', '...kmwwwwwwmk...', '...kmmmmmmmmk...', '...kmmmmmmmmk...', '...kmmmmmmmmk...',
+    '...kmmmmmmmmk...', '...kmmmmmmmmk...', '...kmmmmmmmmk...', '...kmmmmmmmmk...', '...kmmmmmmmmk...', '...kkkkkkkkkk...'].join('/') },
+];
+const subjectList = () => IMAGES.map(i => T.imgSubjects[i.id]).join(LANG === 'en' ? ', ' : '・');
+// 色の名前が言葉に入っていれば、その色で描く（「赤い」「빨간」も拾えるよう、日本語・韓国語は語尾を1文字落として探す）
+const colorIn = text => Object.keys(PAL).find(c => {
+  if (c === '.') return false;
+  const name = T.pal[c].toLowerCase();
+  return /^[a-z ]+$/.test(name) ? new RegExp(`\\b${name}\\b`).test(text) : text.includes(name.length > 1 ? name.slice(0, -1) : name);
+});
 const priceIn = text => Number((T.priceRe.exec(text) || [, '0'])[1].replace(/,/g, ''));
-let Q_MAIN, Q_SIMPLE, Q_DESK, SCENES, DESK_SCENES, SCENES_BY_STAGE;
+let Q_MAIN, Q_SIMPLE, Q_DESK, SCENES, WEB_SCENES, DESK_SCENES, SCENES_BY_STAGE;
 function buildScenes() {
   const S = T.script, sc = S.scenes, ds = S.deskScenes;
   Q_MAIN = S.qMain; Q_SIMPLE = S.qSimple; Q_DESK = S.qDesk;
@@ -1503,7 +1708,24 @@ function buildScenes() {
       ],
     },
   ];
-  SCENES_BY_STAGE = { 3: SCENES, 4: DESK_SCENES };
+  // 段階 2: 道具を1回だけ呼ぶ。Web 検索で調べるか、画像生成で作るかを選べる
+  const W = S.webScenes;
+  WEB_SCENES = [
+    {
+      id: 'search', label: W.search, query: Q_SIMPLE,
+      pick: () => ({ tool: 'web_search', args: { query: S.webQuery(PRODUCTS[2].name) } }),
+      answer: o => {
+        const name = PRODUCTS[2].name, hit = (o.results || []).find(r => r.snippet.includes(name));
+        return hit ? S.answerWith(name, yen(priceIn(hit.snippet.slice(hit.snippet.indexOf(name))))) : T.c.noAnswer;
+      },
+    },
+    {
+      id: 'image', label: W.image, query: S.qImage,
+      pick: () => ({ tool: 'generate_image', args: { prompt: S.imagePrompt } }),
+      answer: o => S.imageAnswer(o.prompt),
+    },
+  ];
+  SCENES_BY_STAGE = { 2: WEB_SCENES, 3: SCENES, 4: DESK_SCENES };
 }
 function scriptedBrain(scene) {
   const att = ctx => scene.attempts[Math.min(ctx.attempt, scene.attempts.length) - 1];
@@ -1514,8 +1736,8 @@ function scriptedBrain(scene) {
     async judge(ctx) { await sleep(250); return att(ctx).judge(ctx.outputs); },
     // 段階 1・2 用。店のデータを見ていない答えは、わざと当て推量にしてある。
     async answerOnly() { await sleep(250); return T.script.guessAnswer; },
-    async pickTool() { await sleep(250); return { tool: 'fetch_product_info', args: { product_name: PRODUCTS[2].name } }; },
-    async answerWith(ctx) { await sleep(250); const o = ctx.output; return T.script.answerWith(o.product_name, yen(o.price_yen)); },
+    async pickTool() { await sleep(250); return scene.pick(); },
+    async answerWith(ctx) { await sleep(250); return scene.answer(ctx.output); },
   };
 }
 
@@ -1795,6 +2017,252 @@ const diagram = {
   },
 };
 
+/* ---------- ステージ: エージェントを1体のアバターにして、持ち場を歩かせる（段階 3・4） ---------- */
+// 図の係（Planner・Evaluator・Executor）は、同じエージェントが役割を変えているだけ。
+// ここでは1体のアバターが持ち場を移動し、胸の帯と名札の色で今の役割を示す。
+// 呼び出しは順番待ちの列に積み、歩く・話すが重ならないようにする。
+const arena = (() => {
+  const W = 960, H = 440, FLOOR = 380;
+  const X = { query: 120, planner: 240, evaluator: 430, shelf: 600, executor: 760, finish: 868 };
+  const LIT = { query: ['query'], planner: ['planner', 'board'], evaluator: ['evaluator', 'board'], shelf: ['shelf'], executor: ['executor', 'tray'], finish: ['finish'] };
+  const TAG = { planner: 'Planner', evaluator: 'Evaluator', executor: 'Executor' };
+  const wrap = $('#arenaScroll'), box = $('#arenaBox'), bubble = $('#arenaBubble'), playBtn = $('#arenaPlay');
+  const reduce = () => diagram.reduce.matches;
+  const txt = (attrs, s) => { const t = sv('text', attrs); t.textContent = s; return t; };
+  const clip = (s, n = 150) => { s = str(s).replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+  let svg, av, flip, face, tag, item, st = {}, slots = {}, notes, stamp, sub, papers, flag;
+  let x = X.query, dir = 1, token = 0, q = Promise.resolve(), bubbleKind = null, nPapers = 0;
+
+  const E = (cx, cy, r) => sv('circle', { class: 'eye', cx, cy, r });
+  const L = d => sv('path', { class: 'eye-l', d });
+  const FACES = {
+    normal: () => [E(-12, -95, 5), E(12, -95, 5), L('M-6,-83 L6,-83')],
+    think: () => [E(-7, -99, 4.5), E(16, -99, 4.5), L('M-3,-83 L7,-84')],
+    work: () => [sv('rect', { class: 'eye', x: -18, y: -97, width: 12, height: 4, rx: 2 }), sv('rect', { class: 'eye', x: 6, y: -97, width: 12, height: 4, rx: 2 }), L('M-5,-83 L5,-83')],
+    happy: () => [L('M-18,-92 Q-12,-102 -6,-92'), L('M6,-92 Q12,-102 18,-92'), L('M-8,-86 Q0,-78 8,-86')],
+    sad: () => [E(-12, -93, 3.5), E(12, -93, 3.5), L('M-19,-99 L-6,-103'), L('M6,-103 L19,-99'), L('M-7,-80 Q0,-86 7,-80')],
+    surprise: () => [E(-12, -96, 6.5), E(12, -96, 6.5), sv('circle', { class: 'eye-l', cx: 0, cy: -82, r: 3.5 })],
+  };
+
+  function build() {
+    const A = T.arena;
+    svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': A.aria });
+    svg.append(sv('rect', { class: 'a-wall', x: 0, y: 0, width: W, height: FLOOR }),
+      sv('rect', { class: 'a-floor', x: 0, y: FLOOR, width: W, height: H - FLOOR }),
+      sv('line', { class: 'a-base', x1: 0, y1: FLOOR, x2: W, y2: FLOOR }));
+    st = {};
+    const station = (id, ...kids) => { const g = sv('g', { class: 'st' }, ...kids); st[id] = g; svg.append(g); return g; };
+    const label = (cx, s) => txt({ class: 'a-label', x: cx, y: FLOOR + 48 }, s);
+    const table = (x1, w, emoji, ex) => [
+      sv('rect', { class: 'prop', x: x1, y: 322, width: w, height: 14, rx: 4 }),
+      sv('rect', { class: 'prop', x: x1 + 10, y: 336, width: 8, height: 44 }),
+      sv('rect', { class: 'prop', x: x1 + w - 18, y: 336, width: 8, height: 44 }),
+      txt({ class: 'a-emoji', x: ex, y: 316, 'font-size': 24 }, emoji)];
+
+    const S = state.stage, agent = S >= 3;
+    station('query', sv('rect', { class: 'prop', x: 34, y: 244, width: 62, height: 136, rx: 6 }),
+      sv('circle', { class: 'knob', cx: 84, cy: 316, r: 3.5 }), label(65, A.st.query));
+    // 計画ボード（壁）
+    notes = sv('g', { class: 'notes' }); stamp = sv('g', { class: 'stamp', transform: 'translate(296,228) rotate(-14)' });
+    sub = txt({ class: 'a-sub', x: 326, y: 60 }, '');
+    // 計画ボード・点検台・作業台はエージェント（段階 3・4）にしかない
+    if (agent) station('board', sv('rect', { class: 'prop', x: 140, y: 34, width: 200, height: 236, rx: 8 }),
+      txt({ class: 'a-title', x: 154, y: 60 }, A.st.board), sub, notes, stamp);
+    station('planner', ...table(176, 128, '📝', 280), label(240, agent ? A.st.planner : A.st2.planner));
+    if (agent) station('evaluator', ...table(388, 88, '🔍', 456), label(430, A.st.evaluator));
+    // 道具の棚（壁）
+    const names = S === 1 ? [] : Object.keys(KIT.tools), sx = 482, sw = 236;
+    const shelf = station('shelf', sv('rect', { class: 'prop', x: sx, y: 34, width: sw, height: 124, rx: 8 }),
+      txt({ class: 'a-title', x: sx + 14, y: 60 }, A.st.shelf),
+      sv('line', { class: 'a-base', x1: sx + 10, y1: 140, x2: sx + sw - 10, y2: 140 }));
+    slots = {};
+    if (!names.length) { shelf.classList.add('empty'); shelf.append(txt({ class: 'a-none', x: sx + sw / 2, y: 112 }, A.noTools)); }
+    names.forEach((n, i) => {
+      const cx = sx + sw * (i + 0.5) / names.length, t = sv('title');
+      t.textContent = n;
+      const g = sv('g', { class: 'slot' }, sv('rect', { class: 'slot-bg', x: cx - 25, y: 82, width: 50, height: 52, rx: 8 }),
+        txt({ class: 'a-emoji', x: cx, y: 121, 'font-size': 30 }, em(n)), t);
+      shelf.append(g); slots[n] = g;
+    });
+    if (agent) station('executor', ...table(700, 120, '🛠️', 796), label(760, A.st.executor));
+    papers = sv('g'); nPapers = 0;
+    if (S >= 2) station('tray', sv('rect', { class: 'prop', x: 738, y: 196, width: 112, height: 46, rx: 6 }),
+      txt({ class: 'a-title', x: 742, y: 186 }, A.st.tray), papers);
+    flag = sv('g', { class: 'flag' }, sv('polygon', { points: '906,214 952,229 906,244' }));
+    station('finish', sv('line', { class: 'pole', x1: 905, y1: 212, x2: 905, y2: FLOOR }), flag, label(905, agent ? A.st.finish : A.st2.finish));
+
+    // アバター（足もとが原点）
+    face = sv('g'); tag = txt({ class: 'av-tag', x: 0, y: 22 }, 'Agent');
+    item = txt({ class: 'av-item', x: 46, y: -70 }, '');
+    flip = sv('g', {}, sv('g', { class: 'av-bob' },
+      sv('rect', { class: 'leg l', x: -17, y: -22, width: 11, height: 22, rx: 5 }),
+      sv('rect', { class: 'leg r', x: 6, y: -22, width: 11, height: 22, rx: 5 }),
+      sv('rect', { class: 'av-arm l', x: -40, y: -62, width: 12, height: 34, rx: 6 }),
+      sv('rect', { class: 'av-arm r', x: 28, y: -62, width: 12, height: 34, rx: 6 }),
+      sv('rect', { class: 'av-body', x: -28, y: -68, width: 56, height: 50, rx: 14 }),
+      sv('rect', { class: 'av-band', x: -27, y: -52, width: 54, height: 9 }),
+      sv('line', { class: 'av-ant', x1: 0, y1: -122, x2: 0, y2: -136 }),
+      sv('circle', { class: 'av-light', cx: 0, cy: -141, r: 6 }),
+      sv('rect', { class: 'av-head', x: -36, y: -124, width: 72, height: 56, rx: 20 }),
+      sv('rect', { class: 'av-visor', x: -28, y: -115, width: 56, height: 39, rx: 12 }),
+      face));
+    av = sv('g', { class: 'avatar' }, sv('ellipse', { class: 'av-shadow', cx: 0, cy: 2, rx: 30, ry: 6 }), flip, item, tag);
+    svg.append(av);
+    box.replaceChildren(svg, bubble);
+    playBtn.replaceChildren(h('b', { text: '▶' }), h('span', null, agent ? A.play : A.play2, h('small', { text: agent ? A.playNote : A.playNote2 })));
+  }
+
+  /* 見た目を変える小さな操作 */
+  const place = nx => { x = nx; av.setAttribute('transform', `translate(${x.toFixed(1)},${FLOOR})`); };
+  const face_ = d => { dir = d; flip.setAttribute('transform', d < 0 ? 'scale(-1,1)' : ''); item.setAttribute('x', 46 * d); };
+  function setRole(role, name) {
+    svg.style.setProperty('--step', `var(--${role})`);
+    bubble.style.setProperty('--bc', `var(--${role})`);
+    tag.textContent = name || (state.stage < 3 ? 'Model' : TAG[role] || 'Agent');
+  }
+  function setMood(m = 'normal') {
+    av.classList.remove('think', 'happy', 'sad', 'work', 'surprise');
+    if (m !== 'normal') { void av.getBBox(); av.classList.add(m); }
+    face.replaceChildren(...FACES[m]());
+  }
+  const light = id => { const on = LIT[id] || []; for (const [k, g] of Object.entries(st)) g.classList.toggle('on', on.includes(k)); };
+  function hideBubble() { bubble.hidden = true; bubbleKind = null; }
+  function showBubble(text, kind) {
+    bubbleKind = kind;
+    bubble.className = 'bubble ' + kind;
+    bubble.textContent = text;
+    bubble.hidden = false;
+    posBubble();
+  }
+  function posBubble() {
+    if (bubble.hidden) return;
+    const s = box.clientWidth / W, bw = bubble.offsetWidth, bh = bubble.offsetHeight;
+    const ax = x * s, want = x < 300 ? ax - 30 : ax - bw / 2;   // 左側では計画ボードを隠さないよう右へ伸ばす
+    const left = Math.max(8, Math.min(box.clientWidth - bw - 8, want));
+    bubble.style.left = left + 'px';
+    bubble.style.top = Math.max(6, (FLOOR - 156) * s - bh) + 'px';
+    bubble.style.setProperty('--tail', (ax - left) + 'px');
+  }
+  // 狭い画面ではステージを横にスクロールさせ、アバターを追いかける
+  function follow(nx) {
+    if (wrap.scrollWidth <= wrap.clientWidth + 2) return;
+    wrap.scrollTo({ left: nx * box.clientWidth / W - wrap.clientWidth / 2, behavior: reduce() ? 'auto' : 'smooth' });
+  }
+  async function walk(nx, my) {
+    const from = x, d = nx - from;
+    if (Math.abs(d) < 1) return;
+    face_(d < 0 ? -1 : 1);
+    follow(nx);
+    if (reduce()) { place(nx); return; }
+    hideBubble();
+    av.classList.add('walking');
+    const dur = Math.min(1300, Math.max(380, Math.abs(d) * 2.1));
+    await new Promise(res => {
+      const t0 = performance.now();
+      const f = t => {
+        if (my !== token) return res();
+        const k = Math.min(1, (t - t0) / dur), ez = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        place(from + d * ez);
+        if (k < 1) requestAnimationFrame(f); else res();
+      };
+      requestAnimationFrame(f);
+    });
+    av.classList.remove('walking');
+  }
+  const pause = ms => (reduce() ? Promise.resolve() : sleep(ms));
+  function enqueue(fn) {
+    const my = token;
+    q = q.then(() => (my === token ? fn(my) : null)).catch(e => console.error(e));
+    return q;
+  }
+
+  /* 計画ボード */
+  function setPlan(steps, unknown = []) {
+    notes.classList.remove('old');
+    notes.replaceChildren(...steps.slice(0, 6).map((s, i) => {
+      const y = 74 + i * 30;
+      return sv('g', { class: 'note' + (unknown.includes(s) ? ' bad' : '') },
+        sv('rect', { x: 152, y, width: 176, height: 26, rx: 4 }),
+        txt({ class: 'nm', x: 160, y: y + 18 }, `${em(s)} ${s}`.slice(0, 22)),
+        txt({ class: 'mk', x: 322, y: y + 19 }, ''));
+    }));
+    if (steps.length > 6) notes.append(txt({ class: 'a-sub', x: 326, y: 262 }, `+${steps.length - 6}`));
+  }
+  function noteState(i, s) {
+    const n = notes.children[i];
+    if (!n) return;
+    n.classList.remove('run', 'ok', 'ng');
+    if (s) n.classList.add(s);
+    n.querySelector('.mk').textContent = s === 'ok' ? '✓' : s === 'ng' ? '✗' : '';
+  }
+  function setStamp(ok) {
+    stamp.setAttribute('class', 'stamp' + (ok == null ? '' : ok ? ' ok' : ' ng'));
+    stamp.replaceChildren(...(ok == null ? [] : [sv('circle', { r: 27 }), txt({ y: 6 }, ok ? 'OK' : 'NG')]));
+  }
+  function pick(name) {
+    for (const [k, g] of Object.entries(slots)) { g.classList.toggle('on', k === name); g.classList.toggle('taken', k === name); }
+    item.textContent = em(name);
+    av.classList.add('holding');
+  }
+  function drop() {
+    for (const g of Object.values(slots)) g.classList.remove('on', 'taken');
+    av.classList.remove('holding');
+  }
+
+  function reset() {
+    token++;
+    q = Promise.resolve();
+    build();
+    hideBubble();
+    face_(1); place(X.query); setRole('ink'); setMood('normal'); light(null);
+    wrap.scrollLeft = 0;
+  }
+  new ResizeObserver(posBubble).observe(box);
+
+  return {
+    reset,
+    idle: () => q,
+    // 持ち場へ歩いていき、表情を変えて話す（think は考え中の吹き出し）
+    go: (where, { role, mood = 'normal', say, think } = {}) => enqueue(async my => {
+      if (role) setRole(role);
+      light(where);
+      await walk(X[where], my);
+      if (my !== token) return;
+      setMood(mood);
+      if (think) showBubble(clip(think), 'think');
+      else if (say) showBubble(clip(say), 'say');
+      else hideBubble();
+      await pause(350);
+    }),
+    say: (text, mood = 'normal', ms = 350) => enqueue(async () => { setMood(mood); showBubble(clip(text), 'say'); await pause(ms); }),
+    // モデルが書いている途中の文を、考え中の吹き出しに流す（列には積まない）
+    stream(t) {
+      if (bubbleKind !== 'think' || bubble.hidden || !t) return;
+      const s = str(t).replace(/\s+/g, ' ');
+      bubble.textContent = s.length > 150 ? '…' + s.slice(-150) : s;
+      posBubble();
+    },
+    wait: ms => enqueue(() => pause(ms)),
+    act: fn => enqueue(async my => fn(my)),
+    // 列の中で使う操作
+    setPlan, noteState, setStamp, pick, drop,
+    board(attempt) { sub.textContent = T.arena.attempt(attempt); setStamp(null); notes.classList.add('old'); },
+    scanShelf: async () => { for (const g of Object.values(slots)) { g.classList.add('on'); await pause(260); } await pause(300); for (const g of Object.values(slots)) g.classList.remove('on'); },
+    paper(err) {
+      if (nPapers >= 7) papers.firstElementChild?.remove();
+      const k = nPapers++ % 7;
+      papers.append(sv('rect', { class: 'paper' + (err ? ' err' : ''), x: 748 + k * 13, y: 204, width: 20, height: 30, rx: 2, transform: `rotate(${(k % 2 ? 4 : -4)} ${758 + k * 13} 219)` }));
+    },
+    clearPapers() { papers.replaceChildren(); nPapers = 0; },
+    // ok: 確かめた答え / 'plain': 確かめていない答え / false: 打ち切り
+    flag(ok) { flag.setAttribute('class', 'flag ' + (ok === 'plain' ? 'up plain' : ok ? 'up ok' : 'ng')); },
+    // 段階 2: 道具はモデルの外でプログラムが動かす。棚が光って、出力トレイに紙が落ちる
+    lightSlot(name, on) { slots[name]?.classList.toggle('on', on); },
+    showPlay(on) { playBtn.hidden = !on; },
+    playBtn,
+  };
+})();
+
 /* ---------- 作業台: ページの中に置いたブラウザ・電卓・ドット絵キャンバス ---------- */
 // 道具として呼ばれると画面の上で動く。人が手で触ることもできる。
 let PAGES = {};
@@ -1846,6 +2314,41 @@ const desk = (() => {
       throw e;
     }
   }
+  // 段階 2 の Web 検索: 店のサイトのページを、言葉の2文字ずつの重なりで探す（日本語・韓国語は語を空白で区切らないため）
+  function searchSite(q) {
+    const qs = str(q).trim();
+    if (!qs) throw new Error(T.err.queryRequired);
+    const norm = t => str(t).toLowerCase().replace(/[\s「」『』“”"'、。，,.!?？！・()（）]/g, '');
+    const nq = norm(qs), grams = new Set();
+    for (let i = 0; i < nq.length - 1; i++) grams.add(nq.slice(i, i + 2));
+    const score = t => { const n = norm(t); let k = 0; for (const g of grams) if (n.includes(g)) k++; return k; };
+    const need = Math.max(2, Math.ceil(grams.size * 0.3));
+    const hits = [];
+    for (const [path, page] of Object.entries(PAGES)) {
+      let best = 0, at = 0;
+      page.text.forEach((t, i) => { const k = score(t); if (k > best) { best = k; at = i; } });
+      const k = Math.max(best, score(page.title));
+      if (k >= need) hits.push({ k, title: page.title, url: SITE + (path === '/' ? '/' : path), snippet: page.text.slice(at, at + 2).join(' ').slice(0, 140) });
+    }
+    hits.sort((a, b) => b.k - a.k);
+    return { query: qs, results: hits.slice(0, 3).map(({ k, ...r }) => r) };
+  }
+  async function search(q, g) {
+    mark('open_page');
+    brUrl.value = `🔎 ${str(q)}`;
+    brPage.replaceChildren(h('p', { class: 'blank', text: T.c.loading }));
+    await wait(450, g);
+    let r;
+    try { r = searchSite(q); } catch (e) { brPage.replaceChildren(h('p', { class: 'blank', text: e.message })); throw e; }
+    brPage.replaceChildren(h('h3', { text: T.c.searchTitle(r.query) }), ...(r.results.length
+      ? r.results.map(x => h('div', { class: 'hit' },
+        h('button', { type: 'button', text: x.title, onclick: () => openPage(x.url, gen).catch(() => {}) }),
+        h('small', { text: x.url }), h('p', { text: x.snippet })))
+      : [h('p', { class: 'blank', text: T.c.noHits })]));
+    brPage.scrollTop = 0;
+    return r;
+  }
+
   $('#brForm').addEventListener('submit', e => { e.preventDefault(); openPage(brUrl.value, gen).catch(() => {}); });
 
   /* 電卓 */
@@ -1950,9 +2453,36 @@ const desk = (() => {
     keyBtns['⌫'].setAttribute('aria-label', T.ui.backspace);
   }
 
+  // 段階 2 の画像生成: 言葉から描くものと色を決め、キャンバスに描く
+  async function generate(prompt, g) {
+    const p = str(prompt).trim();
+    if (!p) throw new Error(T.err.promptRequired);
+    mark('draw_pixels');
+    const lc = p.toLowerCase(), img = IMAGES.find(i => i.keys.some(k => lc.includes(k)));
+    if (!img) throw new Error(T.err.noSubject(subjectList()));
+    const out = await draw(img.art.replace(/m/g, colorIn(lc) || img.color), g);
+    return { prompt: p, image: T.imgSubjects[img.id], ...out };
+  }
+  // 段階 2 と 4 で、置く道具と名札を切り替える
+  function setStage(n) {
+    const web = n === 2;
+    $('#desk').classList.toggle('two', web);
+    box.calculator.hidden = web;
+    const title = (b, emoji, label, code) => {
+      const t = b.querySelector('.tool-title');
+      t.firstChild.nodeValue = emoji + ' ';
+      t.querySelector('[data-i18n]').textContent = label;
+      t.querySelector('code').textContent = code;
+    };
+    title(box.open_page, web ? '🔎' : '🌐', web ? T.ui.webSearch : T.ui.browser, web ? 'web_search' : 'open_page');
+    title(box.draw_pixels, web ? '🖼️' : '🎨', web ? T.ui.imageGen : T.ui.pixel, web ? 'generate_image' : 'draw_pixels');
+  }
+
   function reset() { gen++; mark(null); renderPage(null); press('C'); px.fill('.'); paint(); }
   return {
-    reset, relabel,
+    reset, relabel, setStage,
+    search: q => search(q, gen),
+    generate: p => generate(p, gen),
     openPage: u => openPage(u, gen),
     calculate: e => calculate(e, gen),
     draw: a => draw(a, gen),
@@ -2003,7 +2533,7 @@ function liveBox(body, brain) {
   if (brain.kind !== 'model') return { set() {}, remove() {} };
   const el = pre(T.c.thinking);
   body.append(el);
-  return { set: t => { el.textContent = t || T.c.thinking; }, remove: () => el.remove() };
+  return { set: t => { el.textContent = t || T.c.thinking; arena.stream(t); }, remove: () => el.remove() };
 }
 
 /* ---------- エージェント本体: 図 6-9 の流れをそのまま書いたもの ---------- */
@@ -2047,15 +2577,20 @@ async function* answerOnlyRun(run) {
   diagram.show({ role: 'planner', nodes: ['query', 'model'], edges: ['q_m'] });
   addCard(run, { role: 'ink', who: 'Query', title: C.s1QueryTitle, lead: C.s1QueryLead })
     .append(h('p', { class: 'answer', text: ctx.query }));
+  arena.go('query', { role: 'ink', mood: 'surprise', say: `${T.arena.got} ${ctx.query}` });
   yield;
 
   diagram.show({ role: 'planner', nodes: ['model', 'answer'], edges: ['m_a'] });
   const body = addCard(run, { role: 'planner', who: 'Model', title: C.s1ModelTitle, badge: brain.badge, lead: C.s1ModelLead });
+  arena.go('planner', { role: 'planner', mood: 'think', think: T.arena.think });
+  if (brain.kind === 'script') await arena.wait(1000);
   const live = liveBox(body, brain);
   const prompt = answerOnlyPrompt(ctx);
   const text = await brain.answerOnly(ctx, live.set);
   if (run !== state.run) return;
   live.remove();
+  arena.go('finish', { role: 'planner', mood: 'normal', say: text || C.noAnswer });
+  arena.act(() => arena.flag('plain'));
   const truth = truthNote(ctx.query);
   put(body,
     kv(C.answer, h('p', { class: 'answer', text: text || C.noAnswer })),
@@ -2073,20 +2608,32 @@ async function* toolUseRun(run) {
   diagram.show({ role: 'tools', nodes: ['query', 'tools', 'model'], edges: ['q_m', 't_m'] });
   put(addCard(run, { role: 'ink', who: 'Query', title: C.s2QueryTitle, lead: C.s2QueryLead }),
     h('p', { class: 'answer', text: ctx.query }), kv(C.toolList, toolList()));
+  const A = T.arena, ar = arena;
+  ar.go('query', { role: 'ink', mood: 'surprise', say: `${A.got} ${ctx.query}` });
+  ar.act(() => ar.scanShelf());
   yield;
 
   diagram.show({ role: 'planner', nodes: ['model', 'tools'], edges: ['m_t'] });
   let body = addCard(run, { role: 'planner', who: 'Model', title: C.s2PickTitle, badge: brain.badge, lead: C.s2PickLead });
+  ar.go('planner', { role: 'planner', mood: 'think', think: A.think });
+  if (brain.kind === 'script') await ar.wait(1000);
   let live = liveBox(body, brain);
   const pPrompt = pickPrompt(ctx);
   ctx.call = await brain.pickTool(ctx, live.set);
   if (!alive()) return;
   live.remove();
   put(body, kv(C.call, pre(showCall(ctx.call.tool || C.empty, ctx.call.args))), promptDetails(pPrompt));
+  ar.say(showCall(ctx.call.tool || C.empty, ctx.call.args), 'work');
   yield;
 
   diagram.show({ role: 'tools', nodes: ['tools', 'outputs'], edges: ['t_o'] });
   const { tool, args } = ctx.call;
+  // モデルは机に座ったまま。道具は棚の上でひとりでに動く
+  ar.act(() => { ar.lightSlot(tool, true); });
+  ar.say(A.waitTool, 'normal');
+  ar.wait(900);
+  await ar.idle();
+  if (!alive()) return;
   if (!KIT.tools[tool]) ctx.output = { error: T.err.noTool(tool || C.empty) };
   else {
     const bad = checkArgs(tool, args);
@@ -2096,10 +2643,13 @@ async function* toolUseRun(run) {
   if (!alive()) return;
   put(addCard(run, { role: 'tools', who: 'Tools', title: C.s2RunTitle, badge: C.codeRun, lead: C.s2RunLead }),
     kv(ctx.output.error ? C.outputErr : C.output, pre(fmtOut(ctx.output))));
+  ar.act(() => { ar.lightSlot(tool, false); ar.paper(!!ctx.output.error); });
   yield;
 
   diagram.show({ role: 'planner', nodes: ['outputs', 'model', 'answer'], edges: ['o_m', 'm_a'] });
   body = addCard(run, { role: 'planner', who: 'Model', title: C.s2AnswerTitle, badge: brain.badge, lead: C.s2AnswerLead });
+  ar.go('executor', { role: 'planner', mood: 'think', think: A.readOut });
+  if (brain.kind === 'script') await ar.wait(1000);
   live = liveBox(body, brain);
   const aPrompt = answerWithPrompt(ctx);
   const text = ctx.output.error && brain.kind === 'script'
@@ -2107,6 +2657,8 @@ async function* toolUseRun(run) {
     : await brain.answerWith(ctx, live.set);
   if (!alive()) return;
   live.remove();
+  ar.go('finish', { role: 'planner', mood: ctx.output.error ? 'sad' : 'happy', say: text || C.noAnswer });
+  ar.act(() => ar.flag(ctx.output.error ? false : 'plain'));
   put(body,
     kv(C.answer, h('p', { class: 'answer', text: text || C.noAnswer })),
     promptDetails(aPrompt),
@@ -2119,14 +2671,20 @@ async function* agentRun(run) {
   const { brain, ctx } = run, C = T.c;
   const alive = () => run === state.run;
 
+  const A = T.arena, ar = arena;
+  const oneLine = o => clipText(JSON.stringify(o).replace(/[{}"]/g, '').replace(/,/g, ', ').replace(/:/g, ': '), 110);
+
   diagram.show({ role: 'planner', nodes: ['query', 'planner'], edges: ['q_p'] });
   addCard(run, { role: 'ink', who: 'Query', title: C.s1QueryTitle, lead: C.s3QueryLead })
     .append(h('p', { class: 'answer', text: ctx.query }));
+  ar.go('query', { role: 'ink', mood: 'surprise', say: `${A.got} ${ctx.query}` });
   yield;
 
   diagram.show({ role: 'tools', nodes: ['tools', 'planner'], edges: ['t_p'] });
   addCard(run, { role: 'tools', who: 'Tools', title: C.s3ToolsTitle, lead: KIT.toolsLead })
     .append(toolList());
+  ar.go('shelf', { role: 'planner', mood: 'think', say: A.look(Object.keys(KIT.tools).length) });
+  ar.act(() => ar.scanShelf());
   yield;
 
   for (ctx.attempt = 1; ctx.attempt <= MAX_ATTEMPTS; ctx.attempt++) {
@@ -2140,6 +2698,9 @@ async function* agentRun(run) {
       title: ctx.attempt === 1 ? C.planTitle : C.replanTitle(ctx.attempt),
       lead: ctx.attempt === 1 ? C.planLead : C.replanLead,
     });
+    ar.act(() => { ar.board(ctx.attempt); ar.clearPapers(); });
+    ar.go('planner', { role: 'planner', mood: 'think', think: A.think });
+    if (brain.kind === 'script') await ar.wait(900);
     let live = liveBox(body, brain);
     const prompt = plannerPrompt(ctx);
     run.stats.model++;
@@ -2147,6 +2708,8 @@ async function* agentRun(run) {
     if (!alive()) return;
     live.remove();
     ctx.plan = p.steps;
+    ar.act(() => ar.setPlan(p.steps));
+    ar.say(p.thought || A.planned(p.steps.length), 'normal');
     if (p.thought) body.append(kv(C.thought, h('p', { text: p.thought })));
     body.append(kv(C.plan, p.steps.length ? planList(p.steps) : h('p', { text: C.noPlan })), promptDetails(prompt));
     yield;
@@ -2159,6 +2722,10 @@ async function* agentRun(run) {
       h('ul', { class: 'checks' }, v.checks.map(c => h('li', { class: c.ok ? null : 'ng', text: c.text }))),
       v.unknown.length ? kv(C.plan, planList(ctx.plan, v.unknown)) : null,
       h('p', { class: 'verdict ' + (v.ok ? 'ok' : 'ng'), text: v.ok ? C.checkOk : C.checkNg }));
+    ar.go('evaluator', { role: 'evaluator', mood: 'think', think: C.checkTitle });
+    ar.wait(700);
+    ar.act(() => { ar.setPlan(ctx.plan, v.unknown); ar.setStamp(v.ok); });
+    ar.say(v.ok ? C.checkOk : `${C.checkNg} ${v.feedback || ''}`, v.ok ? 'happy' : 'sad');
     yield;
 
     let feedback = v.feedback;
@@ -2166,6 +2733,7 @@ async function* agentRun(run) {
       diagram.show({ role: 'executor', nodes: ['evaluator', 'executor'], edges: ['e_x'] });
       addCard(run, { role: 'executor', who: 'Executor', title: C.recvTitle, lead: C.recvLead })
         .append(planList(ctx.plan));
+      ar.go('executor', { role: 'executor', mood: 'normal', say: A.recv });
       yield;
 
       /* 3. 計画を実行する */
@@ -2180,6 +2748,10 @@ async function* agentRun(run) {
           lead: (needsArgs ? (i === 0 ? C.callFirst : C.callNext) : C.callNoArgs) + KIT.runNote,
         });
         let args = {}, aPrompt = null;
+        ar.act(() => ar.noteState(i, 'run'));
+        ar.go('shelf', { role: 'executor', mood: needsArgs ? 'think' : 'normal', think: needsArgs ? A.pick : null, say: needsArgs ? null : showName(name) });
+        ar.act(() => ar.pick(name));
+        if (brain.kind === 'script') await ar.wait(needsArgs ? 800 : 300);
         if (needsArgs) {
           live = liveBox(body, brain);
           aPrompt = argsPrompt(ctx, i);
@@ -2189,6 +2761,9 @@ async function* agentRun(run) {
           live.remove();
         }
         const bad = checkArgs(name, args);
+        ar.go('executor', { role: 'executor', mood: 'work', say: showCall(name, args) });
+        await ar.idle();
+        if (!alive()) return;
         let output;
         if (bad) {
           output = { error: bad };
@@ -2202,6 +2777,8 @@ async function* agentRun(run) {
           body.parentElement._hl = diagram.current;
         }
         ctx.outputs.push({ tool: name, args, output });
+        ar.act(() => { ar.drop(); ar.paper(!!output.error); ar.noteState(i, output.error ? 'ng' : 'ok'); });
+        ar.say(output.error ? `✗ ${output.error}` : `→ ${oneLine(output)}`, output.error ? 'surprise' : 'normal');
         put(body, kv(C.call, pre(showCall(name, args))), kv(output.error ? C.outputErr : C.output, pre(fmtOut(output))), aPrompt && promptDetails(aPrompt));
         if (output.error) { failed = { i, name, msg: output.error }; }
         yield;
@@ -2214,8 +2791,11 @@ async function* agentRun(run) {
         feedback = C.stepError(failed.i + 1, failed.name, failed.msg);
         body = addCard(run, { role: 'evaluator', who: 'Evaluator', title: C.resultTitle, badge: C.codeJudge, lead: C.resultErrLead });
         body.append(h('p', { class: 'verdict ng', text: C.notYet }), kv(C.reason, h('p', { text: feedback })));
+        ar.go('evaluator', { role: 'evaluator', mood: 'sad', say: `${C.notYet} ${feedback}` });
       } else {
         body = addCard(run, { role: 'evaluator', who: 'Evaluator', title: C.resultTitle, badge: brain.badge, lead: C.resultLead });
+        ar.go('evaluator', { role: 'evaluator', mood: 'think', think: A.judging });
+        if (brain.kind === 'script') await ar.wait(900);
         live = liveBox(body, brain);
         const jPrompt = judgePrompt(ctx);
         run.stats.model++;
@@ -2224,6 +2804,7 @@ async function* agentRun(run) {
         live.remove();
         if (j.done) {
           body.append(h('p', { class: 'verdict ok', text: C.canAnswer }), kv(C.draft, h('p', { text: j.answer })), promptDetails(jPrompt));
+          ar.say(C.canAnswer, 'happy');
           yield;
           diagram.show({ role: 'finish', nodes: ['evaluator', 'finish'], edges: ['e_f'] });
           put(addCard(run, { role: 'finish', who: 'Finish', title: C.finishTitle }),
@@ -2231,10 +2812,13 @@ async function* agentRun(run) {
             h('p', { class: 'stats', text: statsText(run) }),
             state.stage === 3 && h('p', { class: 'lead', text: C.s3Next }),
             state.stage === 3 && nextStageBtn(4));
+          ar.go('finish', { role: 'finish', mood: 'happy', say: j.answer });
+          ar.act(() => ar.flag(true));
           return;
         }
         feedback = j.feedback;
         body.append(h('p', { class: 'verdict ng', text: C.notYet }), kv(C.reason, h('p', { text: feedback })), promptDetails(jPrompt));
+        ar.say(`${C.notYet} ${feedback}`, 'sad');
       }
       yield;
     }
@@ -2245,17 +2829,21 @@ async function* agentRun(run) {
     diagram.show({ role: 'evaluator', nodes: ['evaluator', 'planner'], edges: ['e_p'] });
     addCard(run, { role: 'evaluator', who: 'Evaluator', title: C.backTitle, lead: C.backLead })
       .append(kv(C.reasonSent, h('p', { text: feedback })));
+    ar.go('planner', { role: 'planner', mood: 'sad', say: `${A.replan} ${feedback}` });
     yield;
   }
 
   diagram.show({ role: 'error', nodes: ['evaluator', 'finish'], edges: ['e_f'] });
   addCard(run, { role: 'error', who: 'Finish', title: C.stopTitle, lead: C.stopLead })
     .append(h('p', { class: 'answer', text: C.noFinal }), h('p', { class: 'stats', text: statsText(run) }));
+  ar.go('finish', { role: 'error', mood: 'sad', say: `${A.stop} ${C.noFinal}` });
+  ar.act(() => ar.flag(false));
 }
+const clipText = (s, n) => { s = str(s); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 const statsText = run => T.c.stats(run.ctx.attempt, run.stats.tool, run.stats.model, run.brain.kind === 'script');
 
 /* ---------- 画面の状態と操作 ---------- */
-const state = { stage: 1, mode: 'script', sceneIdx: { 3: 0, 4: 0 }, run: null, auto: false };
+const state = { stage: 1, mode: 'script', sceneIdx: { 2: 0, 3: 0, 4: 0 }, run: null, auto: false };
 const curScene = () => SCENES_BY_STAGE[state.stage]?.[state.sceneIdx[state.stage]] || SCENES[0];
 const el = {
   next: $('#nextBtn'), auto: $('#autoBtn'), reset: $('#resetBtn'),
@@ -2266,10 +2854,10 @@ const el = {
   query: $('#queryInput'), chips: $('#chips'),
   stageBtns: [...document.querySelectorAll('.stages button')],
   langBtns: [...document.querySelectorAll('[data-lang]')],
-  desk: $('#desk'), footer: $('#footerText'),
+  desk: $('#desk'), footer: $('#footerText'), arena: $('#arena'),
 };
 const modelReady = () => llm.engine && llm.modelId === el.modelSel.value;
-const currentQuery = () => (state.mode !== 'script' ? el.query.value.trim() : state.stage >= 3 ? curScene().query : Q_SIMPLE);
+const currentQuery = () => (state.mode !== 'script' ? el.query.value.trim() : state.stage >= 2 ? curScene().query : Q_SIMPLE);
 
 function newRun() {
   const run = {
@@ -2286,6 +2874,7 @@ function reset() {
   state.run = null;
   desk.reset();
   diagram.clear();
+  arena.reset();
   showEmpty(state.mode === 'model' && !modelReady()
     ? T.c.needModel
     : T.c.pressNext(T.stageDesc[state.stage - 1], state.stage >= 3));
@@ -2300,6 +2889,7 @@ function syncControls() {
   el.auto.setAttribute('aria-pressed', String(state.auto));
   el.next.classList.toggle('primary', !r?.finished);
   el.reset.classList.toggle('primary', !!r?.finished);
+  arena.showPlay(!r && !blocked && !state.auto);
 }
 async function nextStep() {
   if (!state.run) {
@@ -2329,7 +2919,7 @@ async function autoLoop() {
   while (state.auto && !(state.run?.finished)) {
     await nextStep();
     if (state.run?.finished) break;
-    await sleep(1500);
+    await arena.idle(); await sleep(1300);
   }
   state.auto = false; syncControls();
 }
@@ -2339,8 +2929,10 @@ function syncSetup() {
   el.modeScript.setAttribute('aria-pressed', String(mode === 'script'));
   el.modeModel.setAttribute('aria-pressed', String(mode === 'model'));
   el.scriptBox.hidden = mode !== 'script';
-  el.sceneField.hidden = !(mode === 'script' && stage >= 3);
-  el.desk.hidden = stage !== 4;
+  el.sceneField.hidden = !(mode === 'script' && stage >= 2);
+  el.desk.hidden = stage !== 4 && stage !== 2;
+  desk.setStage(stage);
+  el.stage.classList.add('arena-on');
   el.modelBox.hidden = el.modelField.hidden = el.loadBtn.hidden = mode !== 'model';
   el.sceneQuery.textContent = currentQuery();
 }
@@ -2352,9 +2944,9 @@ function setMode(mode) {
 }
 function setStage(n) {
   state.stage = n;
-  KIT = n === 4 ? KITS.desk : KITS.shop;
+  KIT = n === 4 ? KITS.desk : n === 2 ? KITS.web : KITS.shop;
   el.query.value = n === 4 ? Q_DESK : n === 3 ? Q_MAIN : Q_SIMPLE;
-  const chips = n === 4 ? [Q_DESK, ...T.script.chipDesk] : [Q_SIMPLE, Q_MAIN, ...T.script.chipShop];
+  const chips = n === 4 ? [Q_DESK, ...T.script.chipDesk] : n === 2 ? [Q_SIMPLE, ...T.script.chipWeb] : [Q_SIMPLE, Q_MAIN, ...T.script.chipShop];
   el.chips.replaceChildren(...chips.map(q =>
     h('button', { type: 'button', text: q, onclick: () => { el.query.value = q; reset(); } })));
   el.sceneSel.replaceChildren(...(SCENES_BY_STAGE[n] || []).map((s, i) => h('option', { value: i, text: `${i + 1}. ${s.label}` })));
@@ -2452,6 +3044,7 @@ function setLang(lang, save = true) {
 el.next.addEventListener('click', nextStep);
 el.auto.addEventListener('click', () => { state.auto = !state.auto; syncControls(); if (state.auto) autoLoop(); });
 el.reset.addEventListener('click', reset);
+arena.playBtn.addEventListener('click', () => { state.auto = true; syncControls(); autoLoop(); });
 el.modeScript.addEventListener('click', () => setMode('script'));
 el.modeModel.addEventListener('click', () => setMode('model'));
 el.sceneSel.addEventListener('change', () => { state.sceneIdx[state.stage] = +el.sceneSel.value; syncSetup(); reset(); });
